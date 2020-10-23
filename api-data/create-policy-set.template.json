@@ -1,0 +1,17 @@
+{
+  "data": {
+    "type": "policy-sets",
+    "attributes": {
+      "name": "policyset_name",
+      "description": "policyset_desc",
+      "global": false,
+      "policies-path": "policyset_path",
+      "vcs-repo": {
+        "branch": "policyset_branch",
+        "identifier": "policyset_repo",
+        "ingress-submodules": false,
+        "oauth-token-id": "oauth_token"
+      }
+    }
+  }
+}
