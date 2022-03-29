@@ -1,0 +1,12 @@
+{
+    "data": {
+      "attributes": {
+        "name": "placeholder",
+        "terraform_version": "terraformversion",
+        "global-remote-state": "global_remote_state",
+        "auto-apply": "auto_apply",
+        "queue-all-runs": "queue_all_runs"
+      },
+      "type": "workspaces"
+    }
+  }

@@ -1,7 +1,3 @@
-owner,joern@hashicorp.com,terraform,false,false
-name,web-tier,terraform,false,false
-ttl,1440,terraform,false,false
-dns_domain,go.hashidemos.io,terraform,false,false
-key_name,joestack_aws,terraform,false,false
-CONFIRM_DESTROY,1,env,false,false
-AWS_REGION,eu-west-1,env,false,false
+key1,value1,terraform,false,false
+key2,value2,environment,false,false
+key3,...

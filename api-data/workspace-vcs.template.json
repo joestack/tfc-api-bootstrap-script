@@ -2,10 +2,7 @@
   "data": {
     "attributes": {
       "name": "placeholder",
-      "terraform_version": "0.12.29",
       "working-directory": "",
-      "auto-apply": "false",
-      "queue-all-runs": "true",
       "vcs-repo": {
         "identifier": "vcs_repo",
         "oauth-token-id": "oauth_token",
