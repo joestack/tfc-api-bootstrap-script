@@ -1,9 +1,11 @@
 # tfc-api-bootstrap-script
-automatically creates a Terraform Enterprise/Cloud Workspace, Variables, VCS connection, Policy and triggers a run.
-
+Using the Terraform Enterprise/Cloud API to generate Workspace, Variables, VCS connection, assign Policies and trigger a run.
 
 ## environment.conf 
-to setup the workspace, VCS repo, policy
+to customize your specific needs in terms of workspace to be generated, VCS repo to be assigned, policies to be used, etc...
 
 ## variables.csv
-to assign terraform and environment variables
+to assign your specific terraform and environment variables. Mark them as sensitive if needed so that nobody else will ever see them. 
+
+
+Finally run the *create_tfe_environment.sh* script to create or re-create your infrastructure/workload based on the IaC declaration that resides in a version control system.   
