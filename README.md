@@ -8,4 +8,4 @@ to customize your specific needs in terms of workspace to be generated, VCS repo
 to assign your specific terraform and environment variables. Mark them as sensitive if needed so that nobody else will ever see them. 
 
 
-Finally run the *create_tfe_environment.sh* script to create or re-create your infrastructure/workload based on the IaC declaration that resides in a version control system.   
+Finally run the **create_tfe_environment.sh** script to create or re-create your infrastructure/workload based on the IaC declaration that resides in a version control system.   
