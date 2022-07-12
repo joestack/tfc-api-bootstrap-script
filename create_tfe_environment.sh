@@ -1,12 +1,8 @@
 #!/bin/bash
 
 logdir="./logs"
-#timestamp=`date +%g%m%d_%H%M%S`
-#log="$logdir/$timestamp.log"
-#workdir="./tmp"
 
 [[ -d $logdir ]] || mkdir $logdir
-#[[ -d $workdir ]] || mkdir $workdir
 
 source environment.conf
 
@@ -29,9 +25,6 @@ check_doormat() {
 if [[ $(echo $inject_cloud_credentials) = "true" ]] ; then
   echo "checking doormat..." && check_doormat
 fi
-
-
-#tfc_token=$(cat ~/.terraform.d/credentials.tfrc.json | grep token | tr -d "\"" | cut -d : -f2)
 
 
 ################################################
@@ -113,34 +106,6 @@ doormat aws -r $doormat_arn --tf-push --tf-organization $organization --tf-works
 
 echo "Cloud credentials have been injected" && echo
 }
-
-
-
-# ##########################################
-# # Step 3: (optionally) CREATE POLICY-SET #
-# ##########################################
-# create_policyset() {
-
-# # Create payload.json from template 
-# sed -e "s/oauth_token/$oauth_token/" \
-#     -e "s/policyset_name/$policyset_name/" \
-#     -e "s/policyset_path/$policyset_path/" \
-#     -e "s/policyset_repo/$policyset_repo/" \
-#     -e "s/policyset_branch/$policyset_branch/" < ../api-data/create-policy-set.template.json > create-policy-set.json
-
-# # Create policy-set
-# policy_set_result=$(
-#   curl -Ss \
-#        --header "Authorization: Bearer $tfc_token" \
-# 	     --header "Content-Type: application/vnd.api+json" \
-# 	     --request POST \
-# 	     --data @create-policy-set.json \
-# 	     "https://${address}/api/v2/organizations/${organization}/policy-sets"
-# )
-
-# echo "Policy-Set has been created" && echo
-
-# }
 
 
 #########################################################
@@ -280,8 +245,6 @@ create_workspace
 create_variables
 [[ $(echo $inject_cloud_credentials) = "true" ]] && inject_cloud_credentials
 [[ $(echo $assign_vcs_to_workspace) = "true" ]] && get_oauth_token
-#[[ $(echo $create_policyset) = "true" || $(echo $assign_vcs_to_workspace) = "true" ]] && get_oauth_token
-#[[ $(echo $create_policyset) = "true" ]] && create_policyset
 [[ $(echo $attach_workspace2policyset) = "true" ]] && attach_workspace2policyset
 [[ $(echo $assign_vcs_to_workspace) = "true" ]] && add_vcs_to_workspace
 add_workspace_settings
