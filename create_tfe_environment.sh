@@ -163,7 +163,7 @@ add_vcs_to_workspace() {
 #Setup VCS repo and additional parameters (auto-apply, queue run in workspace-vcs.json
 sed -e "s/placeholder/$workspace/" \
     -e "s/vcs_repo/$vcs_repo/" \
-    -e "s/oauth_token/$oauth_token/" < ../api-data/workspace-vcs.template.json  > workspace-vcs.json
+    -e "s/oauth_token/$vcs_provider_oauth_token_id/" < ../api-data/workspace-vcs.template.json  > workspace-vcs.json
 
 # Patch workspace
 workspace_vcs=$(
@@ -244,7 +244,7 @@ trigger_run() {
 create_workspace
 create_variables
 [[ $(echo $inject_cloud_credentials) = "true" ]] && inject_cloud_credentials
-[[ $(echo $assign_vcs_to_workspace) = "true" ]] && get_oauth_token
+#[[ $(echo $assign_vcs_to_workspace) = "true" ]] && get_oauth_token
 [[ $(echo $attach_workspace2policyset) = "true" ]] && attach_workspace2policyset
 [[ $(echo $assign_vcs_to_workspace) = "true" ]] && add_vcs_to_workspace
 add_workspace_settings
