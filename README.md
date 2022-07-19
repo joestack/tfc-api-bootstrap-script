@@ -1,6 +1,14 @@
 # tfc-api-bootstrap-script
 Using the Terraform Enterprise/Cloud API to generate Workspace, Variables, VCS connection, assign Policies and trigger a run.
 
+This allows a very simple Continuous Infrastructure Automation (CIA) pipeline consisting of only two components. A version control system and Terraform Cloud or Terraform Enterprise. 
+
+This enables:
+- Programmatic generation of Terraform Workspaces and Landing Zones, respectively.
+- The secure injection of secrets like cloud credentials as workspace variables (the secret-zero that enables the workflow).
+- The segregation of responsibilities in the form of CIA Pipleline Publisher (admin) and Pipeline Consumer (IaC developer). 
+
+
 ## environment.conf 
 to customize your specific needs in terms of workspace to be generated, VCS repo to be assigned, policies to be used, etc...
 
