@@ -1,5 +1,22 @@
 #!/bin/bash
 
+##TODO
+# check if jq, curl, sed, grep is installed
+#
+# add command line feature to inject/give precedence to a environment.conf and variables.csv
+#
+# add command line feature to renew cloud credentials only
+#
+# make the script and api-data libraries globally available
+# and give local existence of api-data precedence
+#
+# add azure and gcp cloud credentials. A combination of several cloud providers should be possible also.
+#
+# improve debugging capabilities
+#
+# 
+
+
 logdir="./logs"
 
 [[ -d $logdir ]] || mkdir $logdir
@@ -15,10 +32,10 @@ else
 fi
 
 check_doormat() {
-  if [[ $(doormat aws --list) ]] ; then
+  if [[ $(doormat aws list) ]] ; then
    echo "doormat is initialized"
   else
-   echo "doormat is not initialized: doormat --refresh" && exit 1
+   echo "doormat is not initialized: doormat login" && exit 1
   fi
 }
 
@@ -102,7 +119,7 @@ done < ../variables.csv
 ################################
 inject_cloud_credentials() {
 
-doormat aws -r $doormat_arn --tf-push --tf-organization $organization --tf-workspace $workspace
+doormat aws -r $doormat_arn tf-push --tf-organization $organization --tf-workspace $workspace
 
 echo "Cloud credentials have been injected" && echo
 }
