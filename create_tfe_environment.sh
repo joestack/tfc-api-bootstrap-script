@@ -1,9 +1,10 @@
 #!/bin/bash
+version=220722-02
 
-version=220722-01
+set -o xtrace
 
 ##TODO
-# check if jq, curl, sed, grep is installed
+# DONE: check if jq is installed
 #
 # DONE: add command line feature to inject/give precedence to a environment.conf and variables.csv
 #
@@ -21,6 +22,13 @@ version=220722-01
 # api_data_dir :The global folder that contains the api-data templates. The existence of that folder in the current directory got precedence!
 api_data_dir=~/api-data 
 workdir=$(pwd)
+
+if ! command -v jq &> /dev/null
+then
+    echo "jq could not be found"
+    echo "please ensure jq is installed"
+    exit 1
+fi
 
 if [[ ! -e $workdir/environment.conf ]] ; then
   echo "no environment.conf file found in $workdir" && exit 1
@@ -49,7 +57,9 @@ cd $logdir
 if [[ ! -e ~/.terraform.d/credentials.tfrc.json ]] ; then 
   echo "no TFC token found: terraform login" && exit 1
 else
-  tfc_token=$(cat ~/.terraform.d/credentials.tfrc.json | grep token | tr -d "\"" | cut -d : -f2)
+  #tfc_token=$(cat ~/.terraform.d/credentials.tfrc.json | grep token | tr -d "\"" | cut -d : -f2)
+  #tfc_token=$(cat ~/.terraform.d/credentials.tfrc.json | jq -r ".credentials.\"app.terraform.io\".token ")
+  tfc_token=$(cat ~/.terraform.d/credentials.tfrc.json | jq -r ".credentials.\"${address}\".token ")
 fi
 
 check_doormat() {
