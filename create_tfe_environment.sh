@@ -1,13 +1,15 @@
 #!/bin/bash
 
+version=220722-01
+
 ##TODO
 # check if jq, curl, sed, grep is installed
 #
-# add command line feature to inject/give precedence to a environment.conf and variables.csv
+# DONE: add command line feature to inject/give precedence to a environment.conf and variables.csv
 #
 # add command line feature to renew cloud credentials only
 #
-# make the script and api-data libraries globally available
+# DONE: make the script and api-data libraries globally available
 # and give local existence of api-data precedence
 #
 # add azure and gcp cloud credentials. A combination of several cloud providers should be possible also.
@@ -16,12 +18,31 @@
 #
 # 
 
+# api_data_dir :The global folder that contains the api-data templates. The existence of that folder in the current directory got precedence!
+api_data_dir=~/api-data 
+workdir=$(pwd)
 
-logdir="./logs"
+if [[ ! -e $workdir/environment.conf ]] ; then
+  echo "no environment.conf file found in $workdir" && exit 1
+else
+  source $workdir/environment.conf
+fi
+
+if [[ ! -e $workdir/variables.csv ]] ; then
+  echo "no variables.csv file found in $workdir" && exit 1
+fi
+
+if [[ -d $workdir/api-data ]] ; then
+  echo "using api-data declarations found in $workdir"
+  api_data=$workdir/api-data 
+else
+  echo "using api-data declarations found globally"
+  api_data=$api_data_dir 
+fi
+
+logdir=$workdir/logs
 
 [[ -d $logdir ]] || mkdir $logdir
-
-source environment.conf
 
 cd $logdir
 
@@ -46,6 +67,7 @@ fi
 
 ################################################
 # Request the TF[C/E] VCS-Provider oauth-token #
+#    DEPRICATED !!!
 ################################################
 get_oauth_token() {
 
@@ -66,7 +88,7 @@ oauth_token=$(
 create_workspace() {
 
 # Set name of workspace in workspace.json (create a payload.json)
-sed -e "s/placeholder/$workspace/" < ../api-data/workspace.template.json > workspace.json
+sed -e "s/placeholder/$workspace/" < $api_data/workspace.template.json > workspace.json
 
 # Create workspace 
 workspace_result=$(
@@ -99,7 +121,7 @@ do
       -e "s/my-value/$value/" \
       -e "s/my-category/$category/" \
       -e "s/my-hcl/$hcl/" \
-      -e "s/my-sensitive/$sensitive/" < ../api-data/variable.template.json  > variable-$stamp.json
+      -e "s/my-sensitive/$sensitive/" < $api_data/variable.template.json  > variable-$stamp.json
   
   echo "Adding variable $key in category $category "
   
@@ -119,7 +141,7 @@ done < ../variables.csv
 ################################
 inject_cloud_credentials() {
 
-doormat aws -r $doormat_arn tf-push --tf-organization $organization --tf-workspace $workspace
+doormat aws -r $doormat_arn tf-push --organization $organization --workspace $workspace
 
 echo "Cloud credentials have been injected" && echo
 }
@@ -153,7 +175,7 @@ policy_set_id=$(
 )
 
 # Create payload.json from template
-sed -e "s/workspace_id/$workspace_id/" < ../api-data/attach-policy-set.template.json > attach-policy-set.json
+sed -e "s/workspace_id/$workspace_id/" < $api_data/attach-policy-set.template.json > attach-policy-set.json
 
 # Attach the the workspace-id to policy-set-id
 attach_policy_set=$(
@@ -180,7 +202,7 @@ add_vcs_to_workspace() {
 #Setup VCS repo and additional parameters (auto-apply, queue run in workspace-vcs.json
 sed -e "s/placeholder/$workspace/" \
     -e "s/vcs_repo/$vcs_repo/" \
-    -e "s/oauth_token/$vcs_provider_oauth_token_id/" < ../api-data/workspace-vcs.template.json  > workspace-vcs.json
+    -e "s/oauth_token/$vcs_provider_oauth_token_id/" < $api_data/workspace-vcs.template.json  > workspace-vcs.json
 
 # Patch workspace
 workspace_vcs=$(
@@ -207,7 +229,7 @@ sed -e "s/placeholder/$workspace/" \
     -e "s/terraformversion/$terraform_version/" \
     -e "s/global_remote_state/$global_remote_state/" \
     -e "s/auto_apply/$auto_apply/" \
-    -e "s/queue_all_runs/$queue_all_runs/" < ../api-data/workspace-settings.template.json  > workspace-settings.json
+    -e "s/queue_all_runs/$queue_all_runs/" < $api_data/workspace-settings.template.json  > workspace-settings.json
 
 # Patch workspace
 workspace_vcs=$(
@@ -238,7 +260,7 @@ trigger_run() {
       jq -r ".data[] | select (.attributes.name == \"$workspace\") | .id"
     )
 
-  sed -e "s/workspace_id/$workspace_id/" < ../api-data/trigger-run.template.json  > trigger-run.json
+  sed -e "s/workspace_id/$workspace_id/" < $api_data/trigger-run.template.json  > trigger-run.json
 
   apply-run=$(
     curl -Ss \
