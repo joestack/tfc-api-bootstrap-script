@@ -1,7 +1,7 @@
 #!/bin/bash
-version=220722-02
+version=220722-03
 
-set -o xtrace
+#set -o xtrace
 
 ##TODO
 # DONE: check if jq is installed
