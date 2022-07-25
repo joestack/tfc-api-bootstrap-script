@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220722-03
+version=220725-01
 
 #set -o xtrace
 
@@ -57,8 +57,6 @@ cd $logdir
 if [[ ! -e ~/.terraform.d/credentials.tfrc.json ]] ; then 
   echo "no TFC token found: terraform login" && exit 1
 else
-  #tfc_token=$(cat ~/.terraform.d/credentials.tfrc.json | grep token | tr -d "\"" | cut -d : -f2)
-  #tfc_token=$(cat ~/.terraform.d/credentials.tfrc.json | jq -r ".credentials.\"app.terraform.io\".token ")
   tfc_token=$(cat ~/.terraform.d/credentials.tfrc.json | jq -r ".credentials.\"${address}\".token ")
 fi
 
@@ -293,7 +291,6 @@ trigger_run() {
 create_workspace
 create_variables
 [[ $(echo $inject_cloud_credentials) = "true" ]] && inject_cloud_credentials
-#[[ $(echo $assign_vcs_to_workspace) = "true" ]] && get_oauth_token
 [[ $(echo $attach_workspace2policyset) = "true" ]] && attach_workspace2policyset
 [[ $(echo $assign_vcs_to_workspace) = "true" ]] && add_vcs_to_workspace
 add_workspace_settings
