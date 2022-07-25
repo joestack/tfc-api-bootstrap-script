@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220725-03
+version=220725-04
 
 #set -o xtrace
 
@@ -34,6 +34,21 @@ then
     echo "please ensure jq is installed"
     exit 1
 fi
+
+
+usage() {
+ echo
+ echo "$(basename "$0") -- program to automatically create a Terraform [Cloud|Enterprise] landingzone"
+ echo
+ echo "it creates Workspace, Variables, VCS connection, assign Policies, triggers a run via API"
+ echo 
+ echo 
+ echo "[-h]   Print this help message"
+ echo "[-c]   Update cloud credentials only"
+ echo 
+}
+
+
 
 check_environment() {
   if [[ ! -e $workdir/environment.conf ]] ; then
@@ -286,7 +301,26 @@ trigger_run() {
 
 }
 
-
+while getopts ":hc" opt; do
+  case ${opt} in
+    h )
+      usage
+      exit 0
+      ;;
+    c )
+      check_environment
+      check_doormat
+      check_tfc_token
+      inject_cloud_credentials
+      exit 0
+      ;;
+    \? )
+      echo "Invalid Option: -$OPTARG" 1>&2
+      exit 1
+      ;;
+  esac
+done
+shift $((OPTIND -1))
 
 ##################
 ## MAIN SECTION ##
