@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220725-01
+version=220725-03
 
 #set -o xtrace
 
@@ -19,9 +19,14 @@ version=220725-01
 #
 # 
 
-# api_data_dir :The global folder that contains the api-data templates. The existence of that folder in the current directory got precedence!
+# api_data_dir - The global folder that contains the api-data templates. The existence of that folder in the current directory got precedence!
 api_data_dir=~/api-data 
 workdir=$(pwd)
+logdir=$workdir/logs
+
+[[ -d $logdir ]] || mkdir $logdir
+
+cd $logdir
 
 if ! command -v jq &> /dev/null
 then
@@ -30,35 +35,37 @@ then
     exit 1
 fi
 
-if [[ ! -e $workdir/environment.conf ]] ; then
-  echo "no environment.conf file found in $workdir" && exit 1
-else
-  source $workdir/environment.conf
-fi
+check_environment() {
+  if [[ ! -e $workdir/environment.conf ]] ; then
+    echo "no environment.conf file found in $workdir" && exit 1
+  else
+    source $workdir/environment.conf
+  fi
+}
 
-if [[ ! -e $workdir/variables.csv ]] ; then
-  echo "no variables.csv file found in $workdir" && exit 1
-fi
+check_variables() {
+  if [[ ! -e $workdir/variables.csv ]] ; then
+    echo "no variables.csv file found in $workdir" && exit 1
+  fi
+}
 
-if [[ -d $workdir/api-data ]] ; then
-  echo "using api-data declarations found in $workdir"
-  api_data=$workdir/api-data 
-else
-  echo "using api-data declarations found globally"
-  api_data=$api_data_dir 
-fi
+check_api_data() {
+  if [[ -d $workdir/api-data ]] ; then
+    echo "using api-data declarations found in $workdir"
+    api_data=$workdir/api-data 
+  else
+    echo "using api-data declarations found globally"
+    api_data=$api_data_dir 
+  fi
+}
 
-logdir=$workdir/logs
-
-[[ -d $logdir ]] || mkdir $logdir
-
-cd $logdir
-
-if [[ ! -e ~/.terraform.d/credentials.tfrc.json ]] ; then 
-  echo "no TFC token found: terraform login" && exit 1
-else
-  tfc_token=$(cat ~/.terraform.d/credentials.tfrc.json | jq -r ".credentials.\"${address}\".token ")
-fi
+check_tfc_token() {
+  if [[ ! -e ~/.terraform.d/credentials.tfrc.json ]] ; then 
+    echo "no TFC token found: terraform login" && exit 1
+  else
+    tfc_token=$(cat ~/.terraform.d/credentials.tfrc.json | jq -r ".credentials.\"${address}\".token ")
+  fi
+}
 
 check_doormat() {
   if [[ $(doormat aws list) ]] ; then
@@ -67,10 +74,6 @@ check_doormat() {
    echo "doormat is not initialized: doormat login" && exit 1
   fi
 }
-
-if [[ $(echo $inject_cloud_credentials) = "true" ]] ; then
-  echo "checking doormat..." && check_doormat
-fi
 
 
 ################################################
@@ -288,11 +291,16 @@ trigger_run() {
 ##################
 ## MAIN SECTION ##
 ##################
+check_environment
+check_api_data
+check_variables
+check_tfc_token
+[[ $inject_cloud_credentials = "true" ]] && check_doormat
 create_workspace
 create_variables
-[[ $(echo $inject_cloud_credentials) = "true" ]] && inject_cloud_credentials
-[[ $(echo $attach_workspace2policyset) = "true" ]] && attach_workspace2policyset
-[[ $(echo $assign_vcs_to_workspace) = "true" ]] && add_vcs_to_workspace
+[[ $inject_cloud_credentials = "true" ]] && inject_cloud_credentials
+[[ $attach_workspace2policyset = "true" ]] && attach_workspace2policyset
+[[ $assign_vcs_to_workspace = "true" ]] && add_vcs_to_workspace
 add_workspace_settings
-[[ $(echo $trigger_run) = "true" ]] && trigger_run
+[[ $trigger_run = "true" ]] && trigger_run
 
