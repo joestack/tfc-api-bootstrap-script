@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220725-04
+version=220726-01
 
 #set -o xtrace
 
@@ -38,13 +38,19 @@ fi
 
 usage() {
  echo
- echo "$(basename "$0") -- program to automatically create a Terraform [Cloud|Enterprise] landingzone"
+ echo "$(basename "$0") -- programmatically create a Terraform [Cloud|Enterprise] Landing-Zone"
  echo
- echo "it creates Workspace, Variables, VCS connection, assign Policies, triggers a run via API"
+ echo "Create a Workspace, inject Variables, connect VCS repository, assign Policies via API"
+ echo "Publish a VCS-driven pipeline from an administrative perspective"
+ echo "that can be used by a developer or team of developers in a self service manner"
+ echo "(separation of duties)".
+ echo
+ echo "https://github.com/joestack/tfc-api-bootstrap-script.git for more details"
  echo 
  echo 
  echo "[-h]   Print this help message"
- echo "[-c]   Update cloud credentials only"
+ echo "[-v]   Version Info"
+ echo "[-c]   Update cloud credentials to Workspace only"
  echo 
 }
 
@@ -301,10 +307,14 @@ trigger_run() {
 
 }
 
-while getopts ":hc" opt; do
+while getopts ":hvc" opt; do
   case ${opt} in
     h )
       usage
+      exit 0
+      ;;
+    v )
+      echo $version
       exit 0
       ;;
     c )
