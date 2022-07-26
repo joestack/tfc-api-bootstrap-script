@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220726-01
+version=220726-02
 
 #set -o xtrace
 
@@ -230,6 +230,15 @@ echo
 # Step 4: ASSIGN VCS REPO TO WORKSPACE #
 ########################################
 add_vcs_to_workspace() {
+
+##//NEW
+if [[ "$vcs_repo" == *\\* ]]
+then
+  vcs_repo=$vcs_repo
+else
+  vcs_repo=$(echo $vcs_repo | sed 's/\//\\\//g')
+fi
+##NEW//
 
 #Setup VCS repo and additional parameters (auto-apply, queue run in workspace-vcs.json
 sed -e "s/placeholder/$workspace/" \
