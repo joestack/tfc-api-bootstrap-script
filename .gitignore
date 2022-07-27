@@ -1,0 +1,6 @@
+logs/
+
+environment.conf
+variables.csv
+
+*.bak
