@@ -42,6 +42,7 @@ usage() {
     echo "[-h]   Print this help message"
     echo "[-v]   Version Info"
     echo "[-c]   Update cloud credentials to Workspace only"
+    echo "[-d]   Print Debug output"
     echo
 }
 
@@ -323,9 +324,9 @@ trigger_run() {
             jq -r ".data[] | select (.attributes.name == \"$workspace\") | .id"
     )
 
-    [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result_get_workspace_id} | jq -cM '. | @text ')"
+    [[ "${debug}" = "true" ]] && log_debug "Workspace ID: ${result_get_workspace_id}"
 
-    sed -e "s/workspace_id/$workspace_id/" < $api_data/trigger-run.template.json  > trigger-run.json
+    sed -e "s/workspace_id/$result_get_workspace_id/" < $api_data/trigger-run.template.json  > trigger-run.json
 
     local result_apply_run=$(
         execute_curl $tfc_token "POST" \
@@ -355,6 +356,7 @@ while getopts ":hvcd" opt; do
             ;;
         d )
             debug=true
+#	    set -o xtrace
             ;;
         \? )
             echo "Invalid Option: -$OPTARG" 1>&2
