@@ -202,7 +202,7 @@ create_variables() {
 inject_cloud_credentials() {
     doormat aws -r $doormat_arn tf-push --organization $organization --workspace $workspace &> /dev/null
 
-    log_success "Cloud credentials have been injected."
+    log_success "Cloud credentials have been injected into the workspace via doormat."
 }
 
 
