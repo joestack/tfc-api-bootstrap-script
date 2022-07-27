@@ -21,7 +21,11 @@ version=220727-01
 # 
 # Validate environment.conf
 #
-# validate variables.conf
+# Validate variables.csv
+#
+# Remove necessity for escapes in environment.conf
+#
+# Simplify curl executions -> utility function
 
 # api_data_dir - The global folder that contains the api-data templates. The existence of that folder in the current directory got precedence!
 api_data_dir=~/api-data
