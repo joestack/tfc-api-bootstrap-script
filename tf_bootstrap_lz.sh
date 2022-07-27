@@ -357,6 +357,9 @@ shift $((OPTIND -1))
 ##################
 ## MAIN SECTION ##
 ##################
+
+log_info "\nPlease make sure that you have a TFC/TFE organization available and configured in the environment.conf. \nIf you are using Sentinel policies, you need to have a TFC organization with Business subscription or TFE with Governance&Policy module enabled. \nThe organization must have a VCS Provider configured as well."
+
 is_command_installed "jq"
 is_command_installed "doormat"
 is_command_installed "curl"
