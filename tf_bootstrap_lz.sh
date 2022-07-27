@@ -78,18 +78,18 @@ execute_curl() {
     local token="$1"
 
     if [[ "${http_method}" = "GET" ]]; then
-	    local result = $(curl -Ss \
-            --header "Authorization: Bearer ${token}" \
-            --header "Content-Type: application/vnd.api+json" \
-            --request "${http_method}" \
-	    "${url}")
+        local result = $(curl -Ss \
+                --header "Authorization: Bearer ${token}" \
+                --header "Content-Type: application/vnd.api+json" \
+                --request "${http_method}" \
+            "${url}")
     else
-	    local result = $(curl -Ss \
-            --header "Authorization: Bearer ${token}" \
-            --header "Content-Type: application/vnd.api+json" \
-            --request "${http_method}" \
-            --data @${payload} \
-	    "${url}")
+        local result = $(curl -Ss \
+                --header "Authorization: Bearer ${token}" \
+                --header "Content-Type: application/vnd.api+json" \
+                --request "${http_method}" \
+                --data @${payload} \
+            "${url}")
     fi
     [[ "${debug}" = "true" ]] && log_debug ${result}
 }
@@ -204,7 +204,7 @@ create_variables() {
 
         local result=$(
             execute_curl $tfc_token "POST" \
-                 "https://${address}/api/v2/vars?filter%5Borganization%5D%5Bname%5D=${organization}&filter%5Bworkspace%5D%5Bname%5D=${workspace}" \
+                "https://${address}/api/v2/vars?filter%5Borganization%5D%5Bname%5D=${organization}&filter%5Bworkspace%5D%5Bname%5D=${workspace}" \
                 "variable-$stamp.json"
         )
 
@@ -217,11 +217,11 @@ create_variables() {
 # Step 2.1: INJECT CREDENTIALS #
 ################################
 inject_cloud_credentials() {
-	if [[ "${debug}" = "true" ]]; then
-    		doormat aws -r $doormat_arn tf-push --organization $organization --workspace $workspace
-	else
-	    doormat aws -r $doormat_arn tf-push --organization $organization --workspace $workspace &> /dev/null
-	fi
+    if [[ "${debug}" = "true" ]]; then
+        doormat aws -r $doormat_arn tf-push --organization $organization --workspace $workspace
+    else
+        doormat aws -r $doormat_arn tf-push --organization $organization --workspace $workspace &> /dev/null
+    fi
     log_success "Cloud credentials have been injected into the workspace via doormat."
 }
 
@@ -245,19 +245,19 @@ attach_workspace2policyset() {
         # ${pcs// /} was ${policyset_name}
         local result_get_policy_set_id=$(
             execute_curl $tfc_token "GET" \
-		    "https://${address}/api/v2/organizations/${organization}/policy-sets" |\
+                "https://${address}/api/v2/organizations/${organization}/policy-sets" |\
                 jq -r ".data[] | select (.attributes.name == \"${pcs// /}\") | .id"
         )
 
         [[ "${debug}" = "true" ]] && log_debug ${result_get_policy_set_id}
-        
-	# Create payload.json from template
+
+        # Create payload.json from template
         sed -e "s/workspace_id/$workspace_id/" < $api_data/attach-policy-set.template.json > attach-policy-set.json
 
         # Attach the the workspace-id to policy-set-id
         local result_attach_policy_set=$(
             execute_curl $tfc_token "POST"
-                "https://${address}/api/v2/policy-sets/${policy_set_id}/relationships/workspaces" \
+            "https://${address}/api/v2/policy-sets/${policy_set_id}/relationships/workspaces" \
                 "attach-policy-set.json"
         )
 
@@ -290,7 +290,7 @@ add_vcs_to_workspace() {
     local result=$(
         execute_curl $tfc_token "PATCH" \
             "https://${address}/api/v2/organizations/${organization}/workspaces/${workspace}" \
-            "workspace-vcs.json" 
+            "workspace-vcs.json"
     )
 
     [[ "${debug}" = "true" ]] && log_debug ${result}
@@ -317,7 +317,7 @@ add_workspace_settings() {
             "workspace-settings.json"
     )
 
-        [[ "${debug}" = "true" ]] && log_debug ${result}
+    [[ "${debug}" = "true" ]] && log_debug ${result}
     log_success "Workspace settings have been successfully applied."
 }
 
@@ -333,16 +333,16 @@ trigger_run() {
             jq -r ".data[] | select (.attributes.name == \"$workspace\") | .id"
     )
 
-        [[ "${debug}" = "true" ]] && log_debug ${result_get_workspace_id}
+    [[ "${debug}" = "true" ]] && log_debug ${result_get_workspace_id}
 
-	sed -e "s/workspace_id/$workspace_id/" < $api_data/trigger-run.template.json  > trigger-run.json
+    sed -e "s/workspace_id/$workspace_id/" < $api_data/trigger-run.template.json  > trigger-run.json
 
     local result_apply_run=$(
         execute_curl $tfc_token "POST" \
             "https://${address}/api/v2/runs" "trigger-run.json"
     )
 
-        [[ "${debug}" = "true" ]] && log_debug ${result_apply_run}
+    [[ "${debug}" = "true" ]] && log_debug ${result_apply_run}
     log_success "A Terraform run on $workspace has been initiated."
 }
 
@@ -363,9 +363,9 @@ while getopts ":hvcd" opt; do
             inject_cloud_credentials
             exit 0
             ;;
-	d )
-	    debug=true
-	    ;;
+        d )
+            debug=true
+            ;;
         \? )
             echo "Invalid Option: -$OPTARG" 1>&2
             exit 1
