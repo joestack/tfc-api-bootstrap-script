@@ -372,6 +372,7 @@ is_command_installed "jq"
 is_command_installed "sed"
 is_command_installed "doormat"
 is_command_installed "curl"
+is_command_installed "terraform"
 
 check_environment
 check_api_data
