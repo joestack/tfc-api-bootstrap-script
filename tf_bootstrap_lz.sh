@@ -69,6 +69,28 @@ log_debug()     { log "$1" "DEBUG" "\033[1;34m"; }
 log_success()   { log "$1" "SUCCESS" "\033[1;32m"; }
 log_error()     { log "$1" "ERROR" "\033[1;31m"; }
 
+# Utility function to simplify curl calls and handle relevant return codes
+execute_curl() {
+	local url="$3"
+	local http_method="$2"
+	local payload="$4"
+	local token="$1"
+
+	if [[ "${http_method}" = "GET" ]]; then
+	curl -Ss \
+            --header "Authorization: Bearer ${token}" \
+            --header "Content-Type: application/vnd.api+json" \
+            --request "${http_method}" \
+            "${url}"
+	    else 
+		curl -Ss \
+			--header "Authorization: Bearer ${token}" \
+            --header "Content-Type: application/vnd.api+json" \
+            --request "${http_method}" \
+            --data @${payload} \
+	    "${url}"
+	fi
+}
 # Utlity function to check if required software is available
 is_command_installed() {
     local command_to_check="$1"
@@ -134,10 +156,7 @@ check_doormat() {
 get_oauth_token() {
 
     oauth_token=$(
-        curl -Ss \
-            --header "Authorization: Bearer $tfc_token" \
-            --header "Content-Type: application/vnd.api+json" \
-            --request GET \
+      execute_curl $tfc_token "GET" \
             "https://${address}/api/v2/organizations/${organization}/oauth-clients" |\
             jq -r ".data[] | select (.attributes.name == \"$vcs_provider\") | .relationships.\"oauth-tokens\".data[].id "
     )
@@ -154,14 +173,10 @@ create_workspace() {
 
     # Create workspace
     workspace_result=$(
-        curl -Ss \
-            --header "Authorization: Bearer $tfc_token" \
-            --header "Content-Type: application/vnd.api+json" \
-            --request POST \
-            --data @workspace.json \
-            "https://${address}/api/v2/organizations/${organization}/workspaces"
+        execute_curl $tfc_token "POST" \
+            "https://${address}/api/v2/organizations/${organization}/workspaces" "workspace.json"
     )
-
+echo $workspace_result
     log_success "Workspace $workspace has been created."
 }
 
