@@ -18,7 +18,7 @@ version=220727-01
 # DONE: improve debugging capabilities
 #
 # DONE: Add log and is command installed utility functions
-# 
+#
 # Validate environment.conf
 #
 # Validate variables.csv
@@ -71,25 +71,25 @@ log_error()     { log "$1" "ERROR" "\033[1;31m"; }
 
 # Utility function to simplify curl calls and handle relevant return codes
 execute_curl() {
-	local url="$3"
-	local http_method="$2"
-	local payload="$4"
-	local token="$1"
+    local url="$3"
+    local http_method="$2"
+    local payload="$4"
+    local token="$1"
 
-	if [[ "${http_method}" = "GET" ]]; then
-	curl -Ss \
+    if [[ "${http_method}" = "GET" ]]; then
+        curl -Ss \
             --header "Authorization: Bearer ${token}" \
             --header "Content-Type: application/vnd.api+json" \
             --request "${http_method}" \
             "${url}"
-	    else 
-		curl -Ss \
-			--header "Authorization: Bearer ${token}" \
+    else
+        curl -Ss \
+            --header "Authorization: Bearer ${token}" \
             --header "Content-Type: application/vnd.api+json" \
             --request "${http_method}" \
             --data @${payload} \
-	    "${url}"
-	fi
+            "${url}"
+    fi
 }
 # Utlity function to check if required software is available
 is_command_installed() {
@@ -156,7 +156,7 @@ check_doormat() {
 get_oauth_token() {
 
     oauth_token=$(
-      execute_curl $tfc_token "GET" \
+        execute_curl $tfc_token "GET" \
             "https://${address}/api/v2/organizations/${organization}/oauth-clients" |\
             jq -r ".data[] | select (.attributes.name == \"$vcs_provider\") | .relationships.\"oauth-tokens\".data[].id "
     )
@@ -176,7 +176,7 @@ create_workspace() {
         execute_curl $tfc_token "POST" \
             "https://${address}/api/v2/organizations/${organization}/workspaces" "workspace.json"
     )
-echo $workspace_result
+    echo $workspace_result
     log_success "Workspace $workspace has been created."
 }
 
