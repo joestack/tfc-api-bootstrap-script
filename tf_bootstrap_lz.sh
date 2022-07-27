@@ -5,26 +5,16 @@ version=220727-01
 
 ##TODO
 # DONE: check if jq is installed
-#
 # DONE: add command line feature to inject/give precedence to a environment.conf and variables.csv
-#
 # DONE: add command line feature to renew cloud credentials only
-#
 # DONE: make the script and api-data libraries globally available
-# and give local existence of api-data precedence
-#
-# add azure and gcp cloud credentials. A combination of several cloud providers should be possible also.
-#
+# TODO: and give local existence of api-data precedence
+# TODO: add azure and gcp cloud credentials. A combination of several cloud providers should be possible also.
 # DONE: improve debugging capabilities
-#
 # DONE: Add log and is command installed utility functions
-#
-# Validate environment.conf
-#
-# Validate variables.csv
-#
-# Remove necessity for escapes in environment.conf
-#
+# TODO: Validate environment.conf
+# TODO: Validate variables.csv
+# TODO: Remove necessity for escapes in environment.conf
 # DONE: Simplify curl executions -> utility function
 
 # api_data_dir - The global folder that contains the api-data templates. The existence of that folder in the current directory got precedence!
@@ -72,26 +62,27 @@ log_error()     { log "$1" "ERROR" "\033[1;31m"; }
 
 # Utility function to simplify curl calls and handle relevant return codes
 execute_curl() {
-    local url="$3"
-    local http_method="$2"
-    local payload="$4"
     local token="$1"
+    local http_method="$2"
+    local url="$3"
+    local payload="$4"
 
     if [[ "${http_method}" = "GET" ]]; then
-        local result = $(curl -Ss \
+        local result=$(curl -Ss \
                 --header "Authorization: Bearer ${token}" \
                 --header "Content-Type: application/vnd.api+json" \
                 --request "${http_method}" \
             "${url}")
     else
-        local result = $(curl -Ss \
+        local result=$(curl -Ss \
                 --header "Authorization: Bearer ${token}" \
                 --header "Content-Type: application/vnd.api+json" \
                 --request "${http_method}" \
                 --data @${payload} \
             "${url}")
     fi
-    [[ "${debug}" = "true" ]] && log_debug ${result}
+
+    echo "${result}"
 }
 # Utlity function to check if required software is available
 is_command_installed() {
@@ -179,7 +170,7 @@ create_workspace() {
             "https://${address}/api/v2/organizations/${organization}/workspaces" "workspace.json"
     )
 
-    [[ "${debug}" = "true" ]] && log_debug ${result}
+    [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
     log_success "Workspace $workspace has been created."
 }
 
@@ -208,7 +199,7 @@ create_variables() {
                 "variable-$stamp.json"
         )
 
-        [[ "${debug}" = "true" ]] && log_debug ${result}
+        [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
         log_success "Adding variable $key in category $category "
     done < ../variables.csv
 }
@@ -240,7 +231,6 @@ attach_workspace2policyset() {
     IFS=","
     for pcs in $policyset_name
     do
-
         # Retrieve the ID of the policy-set
         # ${pcs// /} was ${policyset_name}
         local result_get_policy_set_id=$(
@@ -249,7 +239,7 @@ attach_workspace2policyset() {
                 jq -r ".data[] | select (.attributes.name == \"${pcs// /}\") | .id"
         )
 
-        [[ "${debug}" = "true" ]] && log_debug ${result_get_policy_set_id}
+        [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result_get_policy_set_id} | jq -cM '. | @text ')"
 
         # Create payload.json from template
         sed -e "s/workspace_id/$workspace_id/" < $api_data/attach-policy-set.template.json > attach-policy-set.json
@@ -261,7 +251,7 @@ attach_workspace2policyset() {
                 "attach-policy-set.json"
         )
 
-        [[ "${debug}" = "true" ]] && log_debug ${result_attach_policy_set}
+        [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result_attach_policy_set} | jq -cM '. | @text ')"
         log_success "Policy-Set ${pcs// /} has been attached to Workspace ${workspace}"
     done
 }
@@ -293,7 +283,7 @@ add_vcs_to_workspace() {
             "workspace-vcs.json"
     )
 
-    [[ "${debug}" = "true" ]] && log_debug ${result}
+        [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
     log_success "VCS repo has been connected to workspace ${workspace}."
 }
 
@@ -317,7 +307,7 @@ add_workspace_settings() {
             "workspace-settings.json"
     )
 
-    [[ "${debug}" = "true" ]] && log_debug ${result}
+        [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
     log_success "Workspace settings have been successfully applied."
 }
 
@@ -333,7 +323,7 @@ trigger_run() {
             jq -r ".data[] | select (.attributes.name == \"$workspace\") | .id"
     )
 
-    [[ "${debug}" = "true" ]] && log_debug ${result_get_workspace_id}
+        [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result_get_workspace_id} | jq -cM '. | @text ')"
 
     sed -e "s/workspace_id/$workspace_id/" < $api_data/trigger-run.template.json  > trigger-run.json
 
@@ -342,7 +332,7 @@ trigger_run() {
             "https://${address}/api/v2/runs" "trigger-run.json"
     )
 
-    [[ "${debug}" = "true" ]] && log_debug ${result_apply_run}
+        [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result_apply_run} | jq -cM '. | @text ')"
     log_success "A Terraform run on $workspace has been initiated."
 }
 
