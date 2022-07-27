@@ -293,7 +293,7 @@ add_workspace_settings() {
         -e "s/terraformversion/$terraform_version/" \
         -e "s/global_remote_state/$global_remote_state/" \
         -e "s/auto_apply/$auto_apply/" \
-        -e "s/queue_all_runs/$queue_all_runs/" < $api_data/workspace-settings.template.json  > workspace-settings.json
+        -e "s/queue_all_runs/$queue_all_runs/" < $api_data/workspace-settings.template.json > workspace-settings.json
 
     # Patch workspace
     workspace_vcs=$(
@@ -334,7 +334,6 @@ trigger_run() {
     ) > /dev/null 2>&1
 
     log_success "A Terraform run on $workspace has been initiated."
-
 }
 
 while getopts ":hvc" opt; do
