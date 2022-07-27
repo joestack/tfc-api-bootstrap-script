@@ -356,7 +356,7 @@ while getopts ":hvcd" opt; do
             ;;
         d )
             debug=true
-#	    set -o xtrace
+            #	    set -o xtrace
             ;;
         \? )
             echo "Invalid Option: -$OPTARG" 1>&2
