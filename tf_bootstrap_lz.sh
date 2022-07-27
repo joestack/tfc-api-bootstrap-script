@@ -283,7 +283,7 @@ add_vcs_to_workspace() {
             "workspace-vcs.json"
     )
 
-        [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
+    [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
     log_success "VCS repo has been connected to workspace ${workspace}."
 }
 
@@ -307,7 +307,7 @@ add_workspace_settings() {
             "workspace-settings.json"
     )
 
-        [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
+    [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
     log_success "Workspace settings have been successfully applied."
 }
 
@@ -323,7 +323,7 @@ trigger_run() {
             jq -r ".data[] | select (.attributes.name == \"$workspace\") | .id"
     )
 
-        [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result_get_workspace_id} | jq -cM '. | @text ')"
+    [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result_get_workspace_id} | jq -cM '. | @text ')"
 
     sed -e "s/workspace_id/$workspace_id/" < $api_data/trigger-run.template.json  > trigger-run.json
 
@@ -332,7 +332,7 @@ trigger_run() {
             "https://${address}/api/v2/runs" "trigger-run.json"
     )
 
-        [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result_apply_run} | jq -cM '. | @text ')"
+    [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result_apply_run} | jq -cM '. | @text ')"
     log_success "A Terraform run on $workspace has been initiated."
 }
 
