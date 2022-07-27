@@ -1,0 +1,16 @@
+{
+    "data": {
+      "attributes": {
+        "message": "IT Service Management via API"
+      },
+      "type":"runs",
+      "relationships": {
+        "workspace": {
+          "data": {
+            "type": "workspaces",
+            "id": "ws-svjSFerupXjuXLyT"
+          }
+        }       
+      }
+    }
+}

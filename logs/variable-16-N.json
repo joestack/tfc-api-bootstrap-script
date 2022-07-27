@@ -1,0 +1,20 @@
+{
+  "data": {
+    "type":"vars",
+    "attributes": {
+      "key":"key1",
+      "value":"value1",
+      "category":"terraform",
+      "hcl":false,
+      "sensitive":false
+    }
+  },
+  "filter": {
+    "organization": {
+      "username":"joestack"
+    },
+    "workspace": {
+      "name":"tfc-aws-hashistack"
+    }
+  }
+}

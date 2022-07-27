@@ -1,0 +1,20 @@
+{
+  "data": {
+    "type":"vars",
+    "attributes": {
+      "key":"aws_region",
+      "value":"eu-central-2",
+      "category":"terraform",
+      "hcl":false,
+      "sensitive":false
+    }
+  },
+  "filter": {
+    "organization": {
+      "username":"mkaesz-dev"
+    },
+    "workspace": {
+      "name":"stm-00-bootstrap"
+    }
+  }
+}

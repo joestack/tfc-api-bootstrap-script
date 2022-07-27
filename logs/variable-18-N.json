@@ -1,0 +1,20 @@
+{
+  "data": {
+    "type":"vars",
+    "attributes": {
+      "key":"key3",
+      "value":"...",
+      "category":"",
+      "hcl":,
+      "sensitive":
+    }
+  },
+  "filter": {
+    "organization": {
+      "username":"joestack"
+    },
+    "workspace": {
+      "name":"tfc-aws-hashistack"
+    }
+  }
+}
