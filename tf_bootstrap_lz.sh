@@ -15,9 +15,9 @@ version=220726-02
 #
 # add azure and gcp cloud credentials. A combination of several cloud providers should be possible also.
 #
-# improve debugging capabilities
+# DONE: improve debugging capabilities
 #
-# 
+# Utiltiy
 
 # api_data_dir - The global folder that contains the api-data templates. The existence of that folder in the current directory got precedence!
 api_data_dir=~/api-data 
@@ -27,14 +27,6 @@ logdir=$workdir/logs
 [[ -d $logdir ]] || mkdir $logdir
 
 cd $logdir
-
-if ! command -v jq &> /dev/null
-then
-    echo "jq could not be found"
-    echo "please ensure jq is installed"
-    exit 1
-fi
-
 
 usage() {
  echo
@@ -54,45 +46,75 @@ usage() {
  echo 
 }
 
+# Utility function to log output
+log() {
+    local log_text="$1"
+    local log_level="$2"
+    local log_color="$3"
 
+    echo -e "${log_color}[$(date +"%Y-%m-%d %H:%M:%S %Z")] [${log_level}] ${log_text} ${LOG_DEFAULT_COLOR}";
+    return 0;
+}
+
+log_info()      { log "$1" "INFO" "\033[1m"; }
+log_debug()     { log "$1" "DEBUG" "\033[1;34m"; }
+log_success()   { log "$1" "SUCCESS" "\033[1;32m"; }
+log_error()     { log "$1" "ERROR" "\033[1;31m"; }
+
+# Utlity function to check if required software is available
+is_command_installed() {
+  local command_to_check="$1"
+
+  if ! command -v ${command_to_check} &> /dev/null
+  then
+    log_error "${command_to_check} could not be found. Please install it."
+    exit 1
+  else
+    log_success "${command_to_check} could be found."
+  fi
+}
 
 check_environment() {
   if [[ ! -e $workdir/environment.conf ]] ; then
-    echo "no environment.conf file found in $workdir" && exit 1
+    log_error "no environment.conf file found in $workdir" && exit 1
   else
     source $workdir/environment.conf
+    log_success "environment.conf successfully sourced."
   fi
 }
 
 check_variables() {
   if [[ ! -e $workdir/variables.csv ]] ; then
-    echo "no variables.csv file found in $workdir" && exit 1
+    log_error "no variables.csv file found in $workdir" && exit 1
   fi
 }
 
 check_api_data() {
   if [[ -d $workdir/api-data ]] ; then
-    echo "using api-data declarations found in $workdir"
+    log_success "Using api-data declarations found in $workdir/api-data"
     api_data=$workdir/api-data 
-  else
-    echo "using api-data declarations found globally"
+  elif [[ -d $api_data_dir ]] ; then
+    log_success "Using api-data declarations found globally in $api_data_dir"
     api_data=$api_data_dir 
+  else
+    log_error "No api-data found. Please provide them in $workdir/api-data or in ~/api-data" && exit 1
   fi
 }
 
 check_tfc_token() {
   if [[ ! -e ~/.terraform.d/credentials.tfrc.json ]] ; then 
-    echo "no TFC token found: terraform login" && exit 1
+    log_error "No TFC/TFE token found. Please execute 'terraform login'" && exit 1
   else
     tfc_token=$(cat ~/.terraform.d/credentials.tfrc.json | jq -r ".credentials.\"${address}\".token ")
+    log_success "Using TFC/TFE token from ~/.terraform.d/credentials.tfrc.json"
   fi
 }
 
 check_doormat() {
   if [[ $(doormat aws list) ]] ; then
-   echo "doormat is initialized"
+   log_success "doormat is initialized."
   else
-   echo "doormat is not initialized: doormat login" && exit 1
+   log_error "doormat has not been initialized. Please run 'doormat login'" && exit 1
   fi
 }
 
@@ -132,8 +154,7 @@ workspace_result=$(
        "https://${address}/api/v2/organizations/${organization}/workspaces"
 )
 
-echo "Workspace $workspace has been created" && echo
-
+  log_success "Workspace $workspace has been created."
 }
 
 
@@ -155,8 +176,6 @@ do
       -e "s/my-hcl/$hcl/" \
       -e "s/my-sensitive/$sensitive/" < $api_data/variable.template.json  > variable-$stamp.json
   
-  echo "Adding variable $key in category $category "
-  
   upload_variable_result=$(
     curl -Ss \
          --header "Authorization: Bearer $tfc_token" \
@@ -164,18 +183,18 @@ do
          --data @variable-$stamp.json \
          "https://${address}/api/v2/vars?filter%5Borganization%5D%5Bname%5D=${organization}&filter%5Bworkspace%5D%5Bname%5D=${workspace}"
   )
-done < ../variables.csv
 
+    log_success "Adding variable $key in category $category "
+done < ../variables.csv
 }
 
 ################################
 # Step 2.1: INJECT CREDENTIALS #
 ################################
 inject_cloud_credentials() {
+  doormat aws -r $doormat_arn tf-push --organization $organization --workspace $workspace
 
-doormat aws -r $doormat_arn tf-push --organization $organization --workspace $workspace
-
-echo "Cloud credentials have been injected" && echo
+  log_success "Cloud credentials have been injected."
 }
 
 
@@ -183,10 +202,9 @@ echo "Cloud credentials have been injected" && echo
 # Step 3.1: ATTACH POLICY-SET TO WORKSPACE #
 #########################################################
 attach_workspace2policyset() {
-
-# Retrieve workspace ID as prerequisite to attach a policy-set to that workspace
-workspace_id=$(
-  curl -Ss \
+  # Retrieve workspace ID as prerequisite to attach a policy-set to that workspace
+  workspace_id=$(
+    curl -Ss \
        --header "Authorization: Bearer $tfc_token" \
        --header "Content-Type: application/vnd.api+json" \
        "https://${address}/api/v2/organizations/${organization}/workspaces" |\
@@ -219,10 +237,8 @@ attach_policy_set=$(
        "https://${address}/api/v2/policy-sets/${policy_set_id}/relationships/workspaces"
 )
 
-echo "Policy-Set ${pcs// /} has been attached to Workspace ${workspace}"
+  log_success "Policy-Set ${pcs// /} has been attached to Workspace ${workspace}"
 done
-
-echo
 }
 
 
@@ -255,8 +271,7 @@ workspace_vcs=$(
 	     "https://${address}/api/v2/organizations/${organization}/workspaces/${workspace}"
 )
 
-echo "VCS has been assigned to Workspace..."
-
+  log_success "VCS repo has been connected to workspace ${workspace}."
 }
 
 
@@ -276,16 +291,14 @@ sed -e "s/placeholder/$workspace/" \
 workspace_vcs=$(
   curl -Ss \
        --header "Authorization: Bearer $tfc_token" \
-	     --header "Content-Type: application/vnd.api+json" \
-	     --request PATCH \
-	     --data @workspace-settings.json \
-	     "https://${address}/api/v2/organizations/${organization}/workspaces/${workspace}"
+       --header "Content-Type: application/vnd.api+json" \
+       --request PATCH \
+       --data @workspace-settings.json \
+       "https://${address}/api/v2/organizations/${organization}/workspaces/${workspace}"
 )
 
-echo "Finalized Workspace settings!"
-
+  log_success "Workspace settings have been successfully applied."
 }
-
 
 
 #######################################
@@ -312,7 +325,7 @@ trigger_run() {
          "https://${address}/api/v2/runs"
   ) > /dev/null 2>&1
 
-  echo "A Run on $workspace is initiated..."
+  log_success "A Terraform run on $workspace has been initiated."
 
 }
 
@@ -344,11 +357,16 @@ shift $((OPTIND -1))
 ##################
 ## MAIN SECTION ##
 ##################
+is_command_installed "jq"
+is_command_installed "doormat"
+is_command_installed "curl"
+
 check_environment
 check_api_data
 check_variables
 check_tfc_token
 [[ $inject_cloud_credentials = "true" ]] && check_doormat
+
 create_workspace
 create_variables
 [[ $inject_cloud_credentials = "true" ]] && inject_cloud_credentials

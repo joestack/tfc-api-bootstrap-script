@@ -1,3 +1,1 @@
-key1,value1,terraform,false,false
-key2,value2,environment,false,false
-key3,...
+aws_region,eu-central-2,terraform,false,false
