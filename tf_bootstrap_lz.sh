@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220726-02
+version=220727-01
 
 #set -o xtrace
 
@@ -17,7 +17,11 @@ version=220726-02
 #
 # DONE: improve debugging capabilities
 #
-# Utiltiy
+# DONE: Add log and is command installed utility functions
+# 
+# Validate environment.conf
+#
+# validate variables.conf
 
 # api_data_dir - The global folder that contains the api-data templates. The existence of that folder in the current directory got precedence!
 api_data_dir=~/api-data
@@ -361,6 +365,7 @@ shift $((OPTIND -1))
 log_info "\nPREREQUISITES:\nPlease make sure that you have a TFC/TFE organization available and configured in the environment.conf. \nIf you are using Sentinel policies, you need to have a TFC organization with Business subscription or TFE with Governance&Policy module enabled. \nThe organization must have a VCS Provider configured as well."
 
 is_command_installed "jq"
+is_command_installed "sed"
 is_command_installed "doormat"
 is_command_installed "curl"
 
