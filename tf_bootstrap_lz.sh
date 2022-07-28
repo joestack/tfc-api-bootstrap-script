@@ -5,32 +5,23 @@ version=220727-01
 
 ##TODO
 # DONE: check if jq is installed
-#
 # DONE: add command line feature to inject/give precedence to a environment.conf and variables.csv
-#
 # DONE: add command line feature to renew cloud credentials only
-#
 # DONE: make the script and api-data libraries globally available
-# and give local existence of api-data precedence
-#
-# add azure and gcp cloud credentials. A combination of several cloud providers should be possible also.
-#
+# TODO: and give local existence of api-data precedence
+# TODO: add azure and gcp cloud credentials. A combination of several cloud providers should be possible also.
 # DONE: improve debugging capabilities
-#
 # DONE: Add log and is command installed utility functions
-# 
-# Validate environment.conf
-#
-# Validate variables.csv
-#
-# Remove necessity for escapes in environment.conf
-#
-# Simplify curl executions -> utility function
+# TODO: Validate environment.conf
+# TODO: Validate variables.csv
+# TODO: Remove necessity for escapes in environment.conf
+# DONE: Simplify curl executions -> utility function
 
 # api_data_dir - The global folder that contains the api-data templates. The existence of that folder in the current directory got precedence!
 api_data_dir=~/api-data
 workdir=$(pwd)
 logdir=$workdir/logs
+debug=false
 
 [[ -d $logdir ]] || mkdir $logdir
 
@@ -51,6 +42,7 @@ usage() {
     echo "[-h]   Print this help message"
     echo "[-v]   Version Info"
     echo "[-c]   Update cloud credentials to Workspace only"
+    echo "[-d]   Print Debug output"
     echo
 }
 
@@ -69,6 +61,30 @@ log_debug()     { log "$1" "DEBUG" "\033[1;34m"; }
 log_success()   { log "$1" "SUCCESS" "\033[1;32m"; }
 log_error()     { log "$1" "ERROR" "\033[1;31m"; }
 
+# Utility function to simplify curl calls and handle relevant return codes
+execute_curl() {
+    local token="$1"
+    local http_method="$2"
+    local url="$3"
+    local payload="$4"
+
+    if [[ "${http_method}" = "GET" ]]; then
+        local result=$(curl -Ss \
+                --header "Authorization: Bearer ${token}" \
+                --header "Content-Type: application/vnd.api+json" \
+                --request "${http_method}" \
+            "${url}")
+    else
+        local result=$(curl -Ss \
+                --header "Authorization: Bearer ${token}" \
+                --header "Content-Type: application/vnd.api+json" \
+                --request "${http_method}" \
+                --data @${payload} \
+            "${url}")
+    fi
+
+    echo "${result}"
+}
 # Utlity function to check if required software is available
 is_command_installed() {
     local command_to_check="$1"
@@ -134,10 +150,7 @@ check_doormat() {
 get_oauth_token() {
 
     oauth_token=$(
-        curl -Ss \
-            --header "Authorization: Bearer $tfc_token" \
-            --header "Content-Type: application/vnd.api+json" \
-            --request GET \
+        execute_curl $tfc_token "GET" \
             "https://${address}/api/v2/organizations/${organization}/oauth-clients" |\
             jq -r ".data[] | select (.attributes.name == \"$vcs_provider\") | .relationships.\"oauth-tokens\".data[].id "
     )
@@ -153,15 +166,12 @@ create_workspace() {
     sed -e "s/placeholder/$workspace/" < $api_data/workspace.template.json > workspace.json
 
     # Create workspace
-    workspace_result=$(
-        curl -Ss \
-            --header "Authorization: Bearer $tfc_token" \
-            --header "Content-Type: application/vnd.api+json" \
-            --request POST \
-            --data @workspace.json \
-            "https://${address}/api/v2/organizations/${organization}/workspaces"
+    local result=$(
+        execute_curl $tfc_token "POST" \
+            "https://${address}/api/v2/organizations/${organization}/workspaces" "workspace.json"
     )
 
+    [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
     log_success "Workspace $workspace has been created."
 }
 
@@ -184,14 +194,13 @@ create_variables() {
             -e "s/my-hcl/$hcl/" \
             -e "s/my-sensitive/$sensitive/" < $api_data/variable.template.json  > variable-$stamp.json
 
-        upload_variable_result=$(
-            curl -Ss \
-                --header "Authorization: Bearer $tfc_token" \
-                --header "Content-Type: application/vnd.api+json" \
-                --data @variable-$stamp.json \
-                "https://${address}/api/v2/vars?filter%5Borganization%5D%5Bname%5D=${organization}&filter%5Bworkspace%5D%5Bname%5D=${workspace}"
+        local result=$(
+            execute_curl $tfc_token "POST" \
+                "https://${address}/api/v2/vars?filter%5Borganization%5D%5Bname%5D=${organization}&filter%5Bworkspace%5D%5Bname%5D=${workspace}" \
+                "variable-$stamp.json"
         )
 
+        [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
         log_success "Adding variable $key in category $category "
     done < ../variables.csv
 }
@@ -200,9 +209,12 @@ create_variables() {
 # Step 2.1: INJECT CREDENTIALS #
 ################################
 inject_cloud_credentials() {
-    doormat aws -r $doormat_arn tf-push --organization $organization --workspace $workspace
-
-    log_success "Cloud credentials have been injected."
+    if [[ "${debug}" = "true" ]]; then
+        doormat aws -r $doormat_arn tf-push --organization $organization --workspace $workspace
+    else
+        doormat aws -r $doormat_arn tf-push --organization $organization --workspace $workspace &> /dev/null
+    fi
+    log_success "Cloud credentials have been injected into the workspace via doormat."
 }
 
 
@@ -211,10 +223,8 @@ inject_cloud_credentials() {
 #########################################################
 attach_workspace2policyset() {
     # Retrieve workspace ID as prerequisite to attach a policy-set to that workspace
-    workspace_id=$(
-        curl -Ss \
-            --header "Authorization: Bearer $tfc_token" \
-            --header "Content-Type: application/vnd.api+json" \
+    local workspace_id=$(
+        execute_curl $tfc_token "GET" \
             "https://${address}/api/v2/organizations/${organization}/workspaces" |\
             jq -r ".data[] | select (.attributes.name == \"$workspace\") | .id"
     )
@@ -222,29 +232,27 @@ attach_workspace2policyset() {
     IFS=","
     for pcs in $policyset_name
     do
-
         # Retrieve the ID of the policy-set
         # ${pcs// /} was ${policyset_name}
-        policy_set_id=$(
-            curl -Ss \
-                --header "Authorization: Bearer $tfc_token" \
+        local result_get_policy_set_id=$(
+            execute_curl $tfc_token "GET" \
                 "https://${address}/api/v2/organizations/${organization}/policy-sets" |\
                 jq -r ".data[] | select (.attributes.name == \"${pcs// /}\") | .id"
         )
+
+        [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result_get_policy_set_id} | jq -cM '. | @text ')"
 
         # Create payload.json from template
         sed -e "s/workspace_id/$workspace_id/" < $api_data/attach-policy-set.template.json > attach-policy-set.json
 
         # Attach the the workspace-id to policy-set-id
-        attach_policy_set=$(
-            curl -Ss \
-                --header "Authorization: Bearer $tfc_token" \
-                --header "Content-Type: application/vnd.api+json" \
-                --request POST \
-                --data @attach-policy-set.json \
-                "https://${address}/api/v2/policy-sets/${policy_set_id}/relationships/workspaces"
+        local result_attach_policy_set=$(
+            execute_curl $tfc_token "POST"
+            "https://${address}/api/v2/policy-sets/${policy_set_id}/relationships/workspaces" \
+                "attach-policy-set.json"
         )
 
+        [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result_attach_policy_set} | jq -cM '. | @text ')"
         log_success "Policy-Set ${pcs// /} has been attached to Workspace ${workspace}"
     done
 }
@@ -270,15 +278,13 @@ add_vcs_to_workspace() {
         -e "s/oauth_token/$vcs_provider_oauth_token_id/" < $api_data/workspace-vcs.template.json  > workspace-vcs.json
 
     # Patch workspace
-    workspace_vcs=$(
-        curl -Ss \
-            --header "Authorization: Bearer $tfc_token" \
-            --header "Content-Type: application/vnd.api+json" \
-            --request PATCH \
-            --data @workspace-vcs.json \
-            "https://${address}/api/v2/organizations/${organization}/workspaces/${workspace}"
+    local result=$(
+        execute_curl $tfc_token "PATCH" \
+            "https://${address}/api/v2/organizations/${organization}/workspaces/${workspace}" \
+            "workspace-vcs.json"
     )
 
+    [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
     log_success "VCS repo has been connected to workspace ${workspace}."
 }
 
@@ -293,18 +299,16 @@ add_workspace_settings() {
         -e "s/terraformversion/$terraform_version/" \
         -e "s/global_remote_state/$global_remote_state/" \
         -e "s/auto_apply/$auto_apply/" \
-        -e "s/queue_all_runs/$queue_all_runs/" < $api_data/workspace-settings.template.json  > workspace-settings.json
+        -e "s/queue_all_runs/$queue_all_runs/" < $api_data/workspace-settings.template.json > workspace-settings.json
 
     # Patch workspace
-    workspace_vcs=$(
-        curl -Ss \
-            --header "Authorization: Bearer $tfc_token" \
-            --header "Content-Type: application/vnd.api+json" \
-            --request PATCH \
-            --data @workspace-settings.json \
-            "https://${address}/api/v2/organizations/${organization}/workspaces/${workspace}"
+    local result=$(
+        execute_curl $tfc_token "PATCH" \
+            "https://${address}/api/v2/organizations/${organization}/workspaces/${workspace}" \
+            "workspace-settings.json"
     )
 
+    [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
     log_success "Workspace settings have been successfully applied."
 }
 
@@ -314,30 +318,26 @@ add_workspace_settings() {
 #######################################
 trigger_run() {
 
-    workspace_id=$(
-        curl -Ss \
-            --header "Authorization: Bearer $tfc_token" \
-            --header "Content-Type: application/vnd.api+json" \
+    local result_get_workspace_id=$(
+        execute_curl $tfc_token "GET" \
             "https://${address}/api/v2/organizations/${organization}/workspaces" |\
             jq -r ".data[] | select (.attributes.name == \"$workspace\") | .id"
     )
 
-    sed -e "s/workspace_id/$workspace_id/" < $api_data/trigger-run.template.json  > trigger-run.json
+    [[ "${debug}" = "true" ]] && log_debug "Workspace ID: ${result_get_workspace_id}"
 
-    apply-run=$(
-        curl -Ss \
-            --header "Authorization: Bearer $tfc_token" \
-            --header "Content-Type: application/vnd.api+json" \
-            --request POST \
-            --data @trigger-run.json \
-            "https://${address}/api/v2/runs"
-    ) > /dev/null 2>&1
+    sed -e "s/workspace_id/$result_get_workspace_id/" < $api_data/trigger-run.template.json  > trigger-run.json
 
+    local result_apply_run=$(
+        execute_curl $tfc_token "POST" \
+            "https://${address}/api/v2/runs" "trigger-run.json"
+    )
+
+    [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result_apply_run} | jq -cM '. | @text ')"
     log_success "A Terraform run on $workspace has been initiated."
-
 }
 
-while getopts ":hvc" opt; do
+while getopts ":hvcd" opt; do
     case ${opt} in
         h )
             usage
@@ -353,6 +353,10 @@ while getopts ":hvc" opt; do
             check_tfc_token
             inject_cloud_credentials
             exit 0
+            ;;
+        d )
+            debug=true
+            #	    set -o xtrace
             ;;
         \? )
             echo "Invalid Option: -$OPTARG" 1>&2
@@ -372,6 +376,7 @@ is_command_installed "jq"
 is_command_installed "sed"
 is_command_installed "doormat"
 is_command_installed "curl"
+is_command_installed "terraform"
 
 check_environment
 check_api_data
