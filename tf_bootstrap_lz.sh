@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220727-01
+version=220729-01
 
 #set -o xtrace
 
@@ -172,7 +172,9 @@ create_workspace() {
     )
 
     [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
-    log_success "Workspace $workspace has been created."
+
+    local link_to_workspace="https://${address}/app/${organization}/workspaces/${workspace}"
+    log_success "Workspace $workspace has been created. Link to the workspace: ${link_to_workspace}"
 }
 
 
@@ -333,8 +335,12 @@ trigger_run() {
             "https://${address}/api/v2/runs" "trigger-run.json"
     )
 
+    local run_id=$(echo $result_apply_run | jq -r .data.id)
+
     [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result_apply_run} | jq -cM '. | @text ')"
-    log_success "A Terraform run on $workspace has been initiated."
+
+    local link_to_run="https://${address}/app/${organization}/workspaces/${workspace}/runs/${run_id}"
+    log_success "A Terraform run on $workspace has been initiated. Link to the run: ${link_to_run}"
 }
 
 while getopts ":hvcd" opt; do
