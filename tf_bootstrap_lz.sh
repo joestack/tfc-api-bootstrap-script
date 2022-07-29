@@ -333,8 +333,10 @@ trigger_run() {
             "https://${address}/api/v2/runs" "trigger-run.json"
     )
 
+    local run_id=$(echo $result_apply_run | jq -r .data.id)
+
     [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result_apply_run} | jq -cM '. | @text ')"
-    log_success "A Terraform run on $workspace has been initiated."
+    log_success "A Terraform run on $workspace has been initiated. Link to the run: https://${address}/app/${organization}/workspaces/${workspace}/runs/${run_id}"
 }
 
 while getopts ":hvcd" opt; do
