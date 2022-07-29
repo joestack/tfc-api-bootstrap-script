@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220729-01
+version=220729-02
 
 #set -o xtrace
 
@@ -8,13 +8,13 @@ version=220729-01
 # DONE: add command line feature to inject/give precedence to a environment.conf and variables.csv
 # DONE: add command line feature to renew cloud credentials only
 # DONE: make the script and api-data libraries globally available
-# TODO: and give local existence of api-data precedence
+# DONE: and give local existence of api-data precedence
 # TODO: add azure and gcp cloud credentials. A combination of several cloud providers should be possible also.
 # DONE: improve debugging capabilities
 # DONE: Add log and is command installed utility functions
 # TODO: Validate environment.conf
-# TODO: Validate variables.csv
-# TODO: Remove necessity for escapes in environment.conf
+# DONE: Validate variables.csv
+# DONE: Remove necessity for escapes in environment.conf
 # DONE: Simplify curl executions -> utility function
 
 # api_data_dir - The global folder that contains the api-data templates. The existence of that folder in the current directory got precedence!
@@ -184,9 +184,11 @@ create_workspace() {
 create_variables() {
 
     # Add variables to workspace
+    grep "^[^#;]" < ../variables.csv | grep '^[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*'|\
     while IFS=',' read -r key value category hcl sensitive
     do
-        stamp=`date +%S-%N`
+        #stamp=`date +%S-%N`
+        stamp=`date +%s@%N`
 
         sed -e "s/my-organization/$organization/" \
             -e "s/my-workspace/$workspace/" \
@@ -204,7 +206,7 @@ create_variables() {
 
         [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
         log_success "Adding variable $key in category $category "
-    done < ../variables.csv
+    done
 }
 
 ################################
@@ -265,14 +267,12 @@ attach_workspace2policyset() {
 ########################################
 add_vcs_to_workspace() {
 
-    ##//NEW
     if [[ "$vcs_repo" == *\\* ]]
     then
         vcs_repo=$vcs_repo
     else
         vcs_repo=$(echo $vcs_repo | sed 's/\//\\\//g')
     fi
-    ##NEW//
 
     #Setup VCS repo and additional parameters (auto-apply, queue run in workspace-vcs.json
     sed -e "s/placeholder/$workspace/" \
