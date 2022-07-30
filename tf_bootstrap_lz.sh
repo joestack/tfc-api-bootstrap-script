@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220730-01
+version=220730-02
 
 #set -o xtrace
 
@@ -385,6 +385,7 @@ log_info "\nPREREQUISITES:\nPlease make sure that you have a TFC/TFE organizatio
 
 is_command_installed "jq"
 is_command_installed "sed"
+is_command_installed "grep"
 is_command_installed "doormat"
 is_command_installed "curl"
 is_command_installed "terraform"
