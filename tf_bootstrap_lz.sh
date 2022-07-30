@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220729-02
+version=220730-01
 
 #set -o xtrace
 
@@ -9,13 +9,18 @@ version=220729-02
 # DONE: add command line feature to renew cloud credentials only
 # DONE: make the script and api-data libraries globally available
 # DONE: and give local existence of api-data precedence
-# TODO: add azure and gcp cloud credentials. A combination of several cloud providers should be possible also.
+# TODO: PRIO add azure and gcp cloud credentials. A combination of several cloud providers should be possible also.
 # DONE: improve debugging capabilities
 # DONE: Add log and is command installed utility functions
 # TODO: Validate environment.conf
 # DONE: Validate variables.csv
 # DONE: Remove necessity for escapes in environment.conf
 # DONE: Simplify curl executions -> utility function
+# DONE: move command check to debug
+# TODO: -a path to API data (prio1), local prio2, global (prio3), otherwise error
+# TODO: -e environment.conf -> see -a
+# IDEA: inject_variables=true/false flag
+# IDEA: multiple levels of output -> like openssh -vvv
 
 # api_data_dir - The global folder that contains the api-data templates. The existence of that folder in the current directory got precedence!
 api_data_dir=~/api-data
@@ -57,7 +62,7 @@ log() {
 }
 
 log_info()      { log "$1" "INFO" "\033[1m"; }
-log_debug()     { log "$1" "DEBUG" "\033[1;34m"; }
+log_debug()     { [[ "${debug}" = "true" ]] && log "$1" "DEBUG" "\033[1;34m"; }
 log_success()   { log "$1" "SUCCESS" "\033[1;32m"; }
 log_error()     { log "$1" "ERROR" "\033[1;31m"; }
 
@@ -94,7 +99,7 @@ is_command_installed() {
         log_error "${command_to_check} could not be found. Please install it."
         exit 1
     else
-        log_success "${command_to_check} could be found."
+        log_debug "${command_to_check} could be found."
     fi
 }
 
@@ -103,7 +108,7 @@ check_environment() {
         log_error "no environment.conf file found in $workdir" && exit 1
     else
         source $workdir/environment.conf
-        log_success "environment.conf successfully sourced."
+        log_debug "environment.conf successfully sourced."
     fi
 }
 
@@ -115,10 +120,10 @@ check_variables() {
 
 check_api_data() {
     if [[ -d $workdir/api-data ]] ; then
-        log_success "Using api-data declarations found in $workdir/api-data"
+        log_debug "Using api-data declarations found in $workdir/api-data"
         api_data=$workdir/api-data
     elif [[ -d $api_data_dir ]] ; then
-        log_success "Using api-data declarations found globally in $api_data_dir"
+        log_debug "Using api-data declarations found globally in $api_data_dir"
         api_data=$api_data_dir
     else
         log_error "No api-data found. Please provide them in $workdir/api-data or in ~/api-data" && exit 1
@@ -130,13 +135,13 @@ check_tfc_token() {
         log_error "No TFC/TFE token found. Please execute 'terraform login'" && exit 1
     else
         tfc_token=$(cat ~/.terraform.d/credentials.tfrc.json | jq -r ".credentials.\"${address}\".token ")
-        log_success "Using TFC/TFE token from ~/.terraform.d/credentials.tfrc.json"
+        log_debug "Using TFC/TFE token from ~/.terraform.d/credentials.tfrc.json"
     fi
 }
 
 check_doormat() {
     if [[ $(doormat aws list) ]] ; then
-        log_success "doormat is initialized."
+        log_debug "doormat is initialized."
     else
         log_error "doormat has not been initialized. Please run 'doormat login'" && exit 1
     fi
@@ -171,7 +176,7 @@ create_workspace() {
             "https://${address}/api/v2/organizations/${organization}/workspaces" "workspace.json"
     )
 
-    [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
+    log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
 
     local link_to_workspace="https://${address}/app/${organization}/workspaces/${workspace}"
     log_success "Workspace $workspace has been created. Link to the workspace: ${link_to_workspace}"
@@ -204,7 +209,7 @@ create_variables() {
                 "variable-$stamp.json"
         )
 
-        [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
+        log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
         log_success "Adding variable $key in category $category "
     done
 }
@@ -244,7 +249,7 @@ attach_workspace2policyset() {
                 jq -r ".data[] | select (.attributes.name == \"${pcs// /}\") | .id"
         )
 
-        [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result_get_policy_set_id} | jq -cM '. | @text ')"
+        log_debug "$(echo -e ${result_get_policy_set_id} | jq -cM '. | @text ')"
 
         # Create payload.json from template
         sed -e "s/workspace_id/$workspace_id/" < $api_data/attach-policy-set.template.json > attach-policy-set.json
@@ -256,7 +261,7 @@ attach_workspace2policyset() {
                 "attach-policy-set.json"
         )
 
-        [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result_attach_policy_set} | jq -cM '. | @text ')"
+        log_debug "$(echo -e ${result_attach_policy_set} | jq -cM '. | @text ')"
         log_success "Policy-Set ${pcs// /} has been attached to Workspace ${workspace}"
     done
 }
@@ -286,7 +291,7 @@ add_vcs_to_workspace() {
             "workspace-vcs.json"
     )
 
-    [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
+    log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
     log_success "VCS repo has been connected to workspace ${workspace}."
 }
 
@@ -310,7 +315,7 @@ add_workspace_settings() {
             "workspace-settings.json"
     )
 
-    [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
+    log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
     log_success "Workspace settings have been successfully applied."
 }
 
@@ -326,7 +331,7 @@ trigger_run() {
             jq -r ".data[] | select (.attributes.name == \"$workspace\") | .id"
     )
 
-    [[ "${debug}" = "true" ]] && log_debug "Workspace ID: ${result_get_workspace_id}"
+    log_debug "Workspace ID: ${result_get_workspace_id}"
 
     sed -e "s/workspace_id/$result_get_workspace_id/" < $api_data/trigger-run.template.json  > trigger-run.json
 
@@ -337,7 +342,7 @@ trigger_run() {
 
     local run_id=$(echo $result_apply_run | jq -r .data.id)
 
-    [[ "${debug}" = "true" ]] && log_debug "$(echo -e ${result_apply_run} | jq -cM '. | @text ')"
+    log_debug "$(echo -e ${result_apply_run} | jq -cM '. | @text ')"
 
     local link_to_run="https://${address}/app/${organization}/workspaces/${workspace}/runs/${run_id}"
     log_success "A Terraform run on $workspace has been initiated. Link to the run: ${link_to_run}"
