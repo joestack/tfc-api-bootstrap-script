@@ -13,7 +13,7 @@ version=220729-02
 # DONE: improve debugging capabilities
 # DONE: Add log and is command installed utility functions
 # TODO: Validate environment.conf
-# TODO: PRIO Validate variables.csv -> last row check/linefeed
+# DONE: Validate variables.csv
 # DONE: Remove necessity for escapes in environment.conf
 # DONE: Simplify curl executions -> utility function
 # DONE: move command check to debug
@@ -189,9 +189,11 @@ create_workspace() {
 create_variables() {
 
     # Add variables to workspace
+    grep "^[^#;]" < ../variables.csv | grep '^[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*'|\
     while IFS=',' read -r key value category hcl sensitive
     do
-        stamp=`date +%S-%N`
+        #stamp=`date +%S-%N`
+        stamp=`date +%s@%N`
 
         sed -e "s/my-organization/$organization/" \
             -e "s/my-workspace/$workspace/" \
@@ -209,7 +211,7 @@ create_variables() {
 
         log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
         log_success "Adding variable $key in category $category "
-    done < ../variables.csv
+    done
 }
 
 ################################
@@ -270,14 +272,12 @@ attach_workspace2policyset() {
 ########################################
 add_vcs_to_workspace() {
 
-    ##//NEW
     if [[ "$vcs_repo" == *\\* ]]
     then
         vcs_repo=$vcs_repo
     else
         vcs_repo=$(echo $vcs_repo | sed 's/\//\\\//g')
     fi
-    ##NEW//
 
     #Setup VCS repo and additional parameters (auto-apply, queue run in workspace-vcs.json
     sed -e "s/placeholder/$workspace/" \
