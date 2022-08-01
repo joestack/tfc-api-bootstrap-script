@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220801-02
+version=220801-02a
 
 #set -o xtrace
 
