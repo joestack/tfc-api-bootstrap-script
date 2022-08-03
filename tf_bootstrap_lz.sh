@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220801-03
+version=220803-02-joestack-dev 
 
 #set -o xtrace
 
@@ -10,6 +10,7 @@ version=220801-03
 # DONE: make the script and api-data libraries globally available
 # DONE: and give local existence of api-data precedence
 # TODO: PRIO add azure and gcp cloud credentials. A combination of several cloud providers should be possible also.
+#       IMPEDIMENT: DOORMAT still sucks. Each cloud provider has its own workflow/capabilities. 
 # DONE: improve debugging capabilities
 # DONE: Add log and is command installed utility functions
 # TODO: Validate environment.conf
@@ -21,6 +22,12 @@ version=220801-03
 # TODO: -e environment.conf -> see -a
 # IDEA: inject_variables=true/false flag
 # IDEA: multiple levels of output -> like openssh -vvv
+# DONE: generic approach to inject AWS cloud credentials into variables.csv
+# TODO: generic approach to inject AZ cloud credentials into variables.csv
+# TODO: generic approach to inject GCP cloud credentials into variables.csv
+# TODO: Proper API call handling to update existing cloud credentials to workspace (PATCH or DELETE and CREATE)
+# TODO: Ensure/CHeck that only the latest cloud credentials exist in variables.csv or as an IDEA: using a dedicated credentials.csv instead of variables.csv 
+
 
 # api_data_dir - The global folder that contains the api-data templates. The existence of that folder in the current directory got precedence!
 api_data_dir=~/api-data
@@ -46,7 +53,8 @@ usage() {
     echo
     echo "[-h]   Print this help message"
     echo "[-v]   Version Info"
-    echo "[-c]   Update cloud credentials to Workspace only"
+    echo "[-c]   Inject AWS cloud credentials to Workspace (only AWS is supported by Doormat)"
+    echo "[-i]   Inject AWS cloud credentials to variables.csv"
     echo "[-d]   Print Debug output"
     echo
 }
@@ -147,6 +155,19 @@ check_doormat() {
     fi
 }
 
+get_aws_credentials() {
+    aws_creds=$(doormat aws json -r $doormat_arn)
+      AWS_ACCESS_KEY_ID=$(echo $aws_creds | jq -r ".AccessKeyId")
+      AWS_SECRET_ACCESS_KEY=$(echo $aws_creds | jq -r ".SecretAccessKey")
+      AWS_SESSION_TOKEN=$(echo $aws_creds | jq -r ".SessionToken")
+      AWS_SESSION_EXPIRATION=$(echo $aws_creds | jq -r ".Expiration")
+
+    echo "AWS_ACCESS_KEY_ID,$AWS_ACCESS_KEY_ID,environment,false,false" >> $workdir/variables.csv
+    echo "AWS_SECRET_ACCESS_KEY,$AWS_SECRET_ACCESS_KEY,environment,false,true" >> $workdir/variables.csv
+    echo "AWS_SESSION_TOKEN,$AWS_SESSION_TOKEN,environment,false,true" >> $workdir/variables.csv
+    echo "AWS_SESSION_EXPIRATION,$AWS_SESSION_EXPIRATION,environment,false,false" >> $workdir/variables.csv
+
+}
 
 ################################################
 # Request the TF[C/E] VCS-Provider oauth-token #
@@ -348,7 +369,7 @@ trigger_run() {
     log_success "A Terraform run on $workspace has been initiated. Link to the run: ${link_to_run}"
 }
 
-while getopts ":hvcd" opt; do
+while getopts ":hvcid" opt; do
     case ${opt} in
         h )
             usage
@@ -365,6 +386,12 @@ while getopts ":hvcd" opt; do
             inject_cloud_credentials
             exit 0
             ;; 
+        i )
+            check_environment
+            check_doormat
+            get_aws_credentials
+            exit 0 # TO BE REMOVED
+            ;;
         d )
             debug=true
             #	    set -o xtrace
