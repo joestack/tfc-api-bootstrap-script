@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220803-02-joestack-dev 
+version=220803-03-joestack-dev 
 
 #set -o xtrace
 
@@ -210,7 +210,7 @@ create_workspace() {
 create_variables() {
 
     # Add variables to workspace
-    grep "^[^#;]" < ../variables.csv | grep '^[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*'|\
+    grep "^[^#;]" < $workdir/variables.csv | grep '^[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*'|\
     while IFS=',' read -r key value category hcl sensitive
     do
         #stamp=`date +%S-%N`
