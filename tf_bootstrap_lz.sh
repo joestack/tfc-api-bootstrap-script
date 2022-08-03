@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220801-02a
+version=220801-03
 
 #set -o xtrace
 
@@ -46,6 +46,7 @@ usage() {
     echo
     echo "[-h]   Print this help message"
     echo "[-v]   Version Info"
+    echo "[-c]   Update cloud credentials to Workspace only"
     echo "[-d]   Print Debug output"
     echo
 }
@@ -138,6 +139,14 @@ check_tfc_token() {
     fi
 }
 
+check_doormat() {
+    if [[ $(doormat aws list) ]] ; then
+        log_success "doormat is initialized."
+    else
+        log_error "doormat has not been initialized. Please run 'doormat login'" && exit 1
+    fi
+}
+
 
 ################################################
 # Request the TF[C/E] VCS-Provider oauth-token #
@@ -204,6 +213,19 @@ create_variables() {
         log_success "Adding variable $key in category $category "
     done
 }
+
+################################
+# Step 2.1: INJECT CREDENTIALS #
+################################
+inject_cloud_credentials() {
+    if [[ "${debug}" = "true" ]]; then
+        doormat aws -r $doormat_arn tf-push --organization $organization --workspace $workspace
+    else
+        doormat aws -r $doormat_arn tf-push --organization $organization --workspace $workspace &> /dev/null
+    fi
+    log_success "Cloud credentials have been injected into the workspace via doormat."
+}
+
 
 #########################################################
 # Step 3.1: ATTACH POLICY-SET TO WORKSPACE #
@@ -326,7 +348,7 @@ trigger_run() {
     log_success "A Terraform run on $workspace has been initiated. Link to the run: ${link_to_run}"
 }
 
-while getopts ":hvd" opt; do
+while getopts ":hvcd" opt; do
     case ${opt} in
         h )
             usage
@@ -336,6 +358,13 @@ while getopts ":hvd" opt; do
             echo $version
             exit 0
             ;;
+        c )
+            check_environment
+            check_doormat
+            check_tfc_token
+            inject_cloud_credentials
+            exit 0
+            ;; 
         d )
             debug=true
             #	    set -o xtrace
@@ -356,6 +385,7 @@ log_info "\nPREREQUISITES:\nPlease make sure that you have a TFC/TFE organizatio
 
 is_command_installed "jq"
 is_command_installed "sed"
+is_command_installed "doormat"
 is_command_installed "grep"
 is_command_installed "curl"
 is_command_installed "terraform"
@@ -364,9 +394,11 @@ check_environment
 check_api_data
 check_variables
 check_tfc_token
+[[ $inject_cloud_credentials = "true" ]] && check_doormat
 
 create_workspace
 create_variables
+[[ $inject_cloud_credentials = "true" ]] && inject_cloud_credentials
 [[ $attach_workspace2policyset = "true" ]] && attach_workspace2policyset
 [[ $assign_vcs_to_workspace = "true" ]] && add_vcs_to_workspace
 add_workspace_settings
