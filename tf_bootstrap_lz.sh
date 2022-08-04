@@ -212,6 +212,11 @@ check_aws_credentials() {
         --request "DELETE" \
         "https://${address}/api/v2/vars/$var_id_aws_session_expiration"
 
+    # HOW IT SHOULD LOOK LIKE:
+    # [[ $var_id_aws_access_key_id != "" ]] && execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_access_key_id"
+    # [[ $var_id_aws_secret_access_key != "" ]] && execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_secret_access_key"
+    # [[ $var_id_aws_session_token != "" ]] && execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_session_token"
+    # [[ $var_id_aws_session_expiration != "" ]] && execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_session_expiration"
 }
 
 
