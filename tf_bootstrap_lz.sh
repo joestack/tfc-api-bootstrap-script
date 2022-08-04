@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220803-03-joestack-dev 
+version=220804-02-joestack-dev 
 
 #set -o xtrace
 
@@ -25,7 +25,10 @@ version=220803-03-joestack-dev
 # DONE: generic approach to inject AWS cloud credentials into variables.csv
 # TODO: generic approach to inject AZ cloud credentials into variables.csv
 # TODO: generic approach to inject GCP cloud credentials into variables.csv
-# TODO: Proper API call handling to update existing cloud credentials to workspace (PATCH or DELETE and CREATE)
+# TODO: Proper API call handling to update existing cloud credentials to workspace (PATCH or DELETE and CREATE
+#       DONE: in case of AWS. Delete AWS Workspace Variables (credentials) if they exist
+#       TODO: Azure
+#       TODO: GCP 
 # TODO: Ensure/CHeck that only the latest cloud credentials exist in variables.csv or as an IDEA: using a dedicated credentials.csv instead of variables.csv 
 
 
@@ -169,9 +172,52 @@ get_aws_credentials() {
 
 }
 
+check_aws_credentials() {
+
+    all_ws_vars=$(
+        execute_curl $tfc_token "GET" \
+            "https://${address}/api/v2/vars?filter%5Borganization%5D%5Bname%5D=${organization}&filter%5Bworkspace%5D%5Bname%5D=${workspace}"
+    )
+
+    var_id_aws_access_key_id=$(echo $all_ws_vars | jq -r ".data[] | select (.attributes.key == \"AWS_ACCESS_KEY_ID\") | .id ")
+    var_id_aws_secret_access_key=$(echo $all_ws_vars | jq -r ".data[] | select (.attributes.key == \"AWS_SECRET_ACCESS_KEY\") | .id ")
+    var_id_aws_session_token=$(echo $all_ws_vars | jq -r ".data[] | select (.attributes.key == \"AWS_SESSION_TOKEN\") | .id ")
+    var_id_aws_session_expiration=$(echo $all_ws_vars | jq -r ".data[] | select (.attributes.key == \"AWS_SESSION_EXPIRATION\") | .id ")
+    
+    [[ $var_id_aws_access_key_id != "" ]] && \
+        curl -sS \
+        --header "Authorization: Bearer $tfc_token" \
+        --header "Content-Type: application/vnd.api+json" \
+        --request "DELETE" \
+        "https://${address}/api/v2/vars/$var_id_aws_access_key_id"
+
+    [[ $var_id_aws_secret_access_key != "" ]] && \
+        curl -sS \
+        --header "Authorization: Bearer $tfc_token" \
+        --header "Content-Type: application/vnd.api+json" \
+        --request "DELETE" \
+        "https://${address}/api/v2/vars/$var_id_aws_secret_access_key"
+
+    [[ $var_id_aws_session_token != "" ]] && \
+        curl -sS \
+        --header "Authorization: Bearer $tfc_token" \
+        --header "Content-Type: application/vnd.api+json" \
+        --request "DELETE" \
+        "https://${address}/api/v2/vars/$var_id_aws_session_token"
+
+    [[ $var_id_aws_session_expiration != "" ]] && \
+        curl -sS \
+        --header "Authorization: Bearer $tfc_token" \
+        --header "Content-Type: application/vnd.api+json" \
+        --request "DELETE" \
+        "https://${address}/api/v2/vars/$var_id_aws_session_expiration"
+
+}
+
+
 ################################################
 # Request the TF[C/E] VCS-Provider oauth-token #
-#    DEPRICATED !!!
+#    DEPRICATED !!! 
 ################################################
 get_oauth_token() {
 
@@ -389,7 +435,9 @@ while getopts ":hvcid" opt; do
         i )
             check_environment
             check_doormat
-            get_aws_credentials
+            check_tfc_token
+            check_aws_credentials
+            #get_aws_credentials
             exit 0 # TO BE REMOVED
             ;;
         d )
