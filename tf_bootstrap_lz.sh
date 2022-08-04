@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220804-02-joestack-dev 
+version=220804-03-joestack-dev 
 
 #set -o xtrace
 
@@ -78,6 +78,43 @@ log_success()   { log "$1" "SUCCESS" "\033[1;32m"; }
 log_error()     { log "$1" "ERROR" "\033[1;31m"; }
 
 # Utility function to simplify curl calls and handle relevant return codes
+
+tf_curl() {
+    local token="$1"
+    local http_method="$2"
+    local url="$3"
+    local payload="$4"
+
+    case $http_method in
+        # GET)
+        #     local result=$(curl -Ss \
+        #         --header "Authorization: Bearer ${token}" \
+        #         --header "Content-Type: application/vnd.api+json" \
+        #         --request "${http_method}" \
+        #     "${url}")
+        #     ;;
+        GET | DELETE)
+            local result=$(curl -Ss \
+                --header "Authorization: Bearer ${token}" \
+                --header "Content-Type: application/vnd.api+json" \
+                --request "${http_method}" \
+            "${url}")
+            ;;
+        PATCH | POST)
+            local result=$(curl -Ss \
+                --header "Authorization: Bearer ${token}" \
+                --header "Content-Type: application/vnd.api+json" \
+                --request "${http_method}" \
+                --data @${payload} \
+            "${url}")
+            ;;
+        *)
+            log_error "invalid tf_curl request" && exit 1
+    esac
+
+    echo "${result}"
+}
+
 execute_curl() {
     local token="$1"
     local http_method="$2"
