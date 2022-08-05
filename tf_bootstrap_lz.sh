@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220804-03-joestack-dev 
+version=220805-02-joestack-dev 
 
 #set -o xtrace
 
@@ -79,20 +79,13 @@ log_error()     { log "$1" "ERROR" "\033[1;31m"; }
 
 # Utility function to simplify curl calls and handle relevant return codes
 
-tf_curl() {
+execute_curl() {
     local token="$1"
     local http_method="$2"
     local url="$3"
     local payload="$4"
 
     case $http_method in
-        # GET)
-        #     local result=$(curl -Ss \
-        #         --header "Authorization: Bearer ${token}" \
-        #         --header "Content-Type: application/vnd.api+json" \
-        #         --request "${http_method}" \
-        #     "${url}")
-        #     ;;
         GET | DELETE)
             local result=$(curl -Ss \
                 --header "Authorization: Bearer ${token}" \
@@ -115,29 +108,6 @@ tf_curl() {
     echo "${result}"
 }
 
-execute_curl() {
-    local token="$1"
-    local http_method="$2"
-    local url="$3"
-    local payload="$4"
-
-    if [[ "${http_method}" = "GET" ]]; then
-        local result=$(curl -Ss \
-                --header "Authorization: Bearer ${token}" \
-                --header "Content-Type: application/vnd.api+json" \
-                --request "${http_method}" \
-            "${url}")
-    else
-        local result=$(curl -Ss \
-                --header "Authorization: Bearer ${token}" \
-                --header "Content-Type: application/vnd.api+json" \
-                --request "${http_method}" \
-                --data @${payload} \
-            "${url}")
-    fi
-
-    echo "${result}"
-}
 # Utlity function to check if required software is available
 is_command_installed() {
     local command_to_check="$1"
@@ -206,11 +176,9 @@ get_aws_credentials() {
     echo "AWS_SECRET_ACCESS_KEY,$AWS_SECRET_ACCESS_KEY,environment,false,true" >> $workdir/variables.csv
     echo "AWS_SESSION_TOKEN,$AWS_SESSION_TOKEN,environment,false,true" >> $workdir/variables.csv
     echo "AWS_SESSION_EXPIRATION,$AWS_SESSION_EXPIRATION,environment,false,false" >> $workdir/variables.csv
-
 }
 
 check_aws_credentials() {
-
     all_ws_vars=$(
         execute_curl $tfc_token "GET" \
             "https://${address}/api/v2/vars?filter%5Borganization%5D%5Bname%5D=${organization}&filter%5Bworkspace%5D%5Bname%5D=${workspace}"
@@ -221,45 +189,17 @@ check_aws_credentials() {
     var_id_aws_session_token=$(echo $all_ws_vars | jq -r ".data[] | select (.attributes.key == \"AWS_SESSION_TOKEN\") | .id ")
     var_id_aws_session_expiration=$(echo $all_ws_vars | jq -r ".data[] | select (.attributes.key == \"AWS_SESSION_EXPIRATION\") | .id ")
     
-    [[ $var_id_aws_access_key_id != "" ]] && \
-        curl -sS \
-        --header "Authorization: Bearer $tfc_token" \
-        --header "Content-Type: application/vnd.api+json" \
-        --request "DELETE" \
-        "https://${address}/api/v2/vars/$var_id_aws_access_key_id"
 
-    [[ $var_id_aws_secret_access_key != "" ]] && \
-        curl -sS \
-        --header "Authorization: Bearer $tfc_token" \
-        --header "Content-Type: application/vnd.api+json" \
-        --request "DELETE" \
-        "https://${address}/api/v2/vars/$var_id_aws_secret_access_key"
-
-    [[ $var_id_aws_session_token != "" ]] && \
-        curl -sS \
-        --header "Authorization: Bearer $tfc_token" \
-        --header "Content-Type: application/vnd.api+json" \
-        --request "DELETE" \
-        "https://${address}/api/v2/vars/$var_id_aws_session_token"
-
-    [[ $var_id_aws_session_expiration != "" ]] && \
-        curl -sS \
-        --header "Authorization: Bearer $tfc_token" \
-        --header "Content-Type: application/vnd.api+json" \
-        --request "DELETE" \
-        "https://${address}/api/v2/vars/$var_id_aws_session_expiration"
-
-    # HOW IT SHOULD LOOK LIKE:
-    # [[ $var_id_aws_access_key_id != "" ]] && execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_access_key_id"
-    # [[ $var_id_aws_secret_access_key != "" ]] && execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_secret_access_key"
-    # [[ $var_id_aws_session_token != "" ]] && execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_session_token"
-    # [[ $var_id_aws_session_expiration != "" ]] && execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_session_expiration"
+    [[ $var_id_aws_access_key_id != "" ]] && execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_access_key_id"
+    [[ $var_id_aws_secret_access_key != "" ]] && execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_secret_access_key"
+    [[ $var_id_aws_session_token != "" ]] && execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_session_token"
+    [[ $var_id_aws_session_expiration != "" ]] && execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_session_expiration"
 }
 
 
 ################################################
 # Request the TF[C/E] VCS-Provider oauth-token #
-#    DEPRICATED !!! 
+#    DEPRECATED !!! 
 ################################################
 get_oauth_token() {
 
@@ -479,7 +419,7 @@ while getopts ":hvcid" opt; do
             check_doormat
             check_tfc_token
             check_aws_credentials
-            #get_aws_credentials
+            get_aws_credentials
             exit 0 # TO BE REMOVED
             ;;
         d )
