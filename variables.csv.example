@@ -2,8 +2,8 @@
 # Variables CSV File 
 #
 # ASSIGNING Values TO DECLARED Variables (wiz of oz secret-zero starting-point)   
-# KEY,VALUE,[terraform|environment],HCL[true|false],SENSITIVE[true|false]
+# KEY,VALUE,[terraform|env],HCL[true|false],SENSITIVE[true|false]
 #
 aws_region,eu-central-2,terraform,false,false
-key,value,environment,false,false
-key,sensitive_value,environment,false,true
+key,value,env,false,false
+key,sensitive_value,env,false,true

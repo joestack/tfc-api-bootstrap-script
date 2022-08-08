@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220805-02-joestack-dev 
+version=220808-01-joestack-dev 
 
 #set -o xtrace
 
@@ -42,25 +42,6 @@ debug=false
 
 cd $logdir
 
-usage() {
-    echo
-    echo "$(basename "$0") -- programmatically create a Terraform [Cloud|Enterprise] Landing-Zone"
-    echo
-    echo "Create a Workspace, inject Variables, connect VCS repository, assign Policies via API"
-    echo "Publish a VCS-driven pipeline from an administrative perspective"
-    echo "that can be used by a developer or team of developers in a self service manner"
-    echo "(separation of duties)".
-    echo
-    echo "https://github.com/joestack/tfc-api-bootstrap-script.git for more details"
-    echo
-    echo
-    echo "[-h]   Print this help message"
-    echo "[-v]   Version Info"
-    echo "[-c]   Inject AWS cloud credentials to Workspace (only AWS is supported by Doormat)"
-    echo "[-i]   Inject AWS cloud credentials to variables.csv"
-    echo "[-d]   Print Debug output"
-    echo
-}
 
 # Utility function to log output
 log() {
@@ -165,20 +146,52 @@ check_doormat() {
     fi
 }
 
-get_aws_credentials() {
-    aws_creds=$(doormat aws json -r $doormat_arn)
-      AWS_ACCESS_KEY_ID=$(echo $aws_creds | jq -r ".AccessKeyId")
-      AWS_SECRET_ACCESS_KEY=$(echo $aws_creds | jq -r ".SecretAccessKey")
-      AWS_SESSION_TOKEN=$(echo $aws_creds | jq -r ".SessionToken")
-      AWS_SESSION_EXPIRATION=$(echo $aws_creds | jq -r ".Expiration")
 
-    echo "AWS_ACCESS_KEY_ID,$AWS_ACCESS_KEY_ID,environment,false,false" >> $workdir/variables.csv
-    echo "AWS_SECRET_ACCESS_KEY,$AWS_SECRET_ACCESS_KEY,environment,false,true" >> $workdir/variables.csv
-    echo "AWS_SESSION_TOKEN,$AWS_SESSION_TOKEN,environment,false,true" >> $workdir/variables.csv
-    echo "AWS_SESSION_EXPIRATION,$AWS_SESSION_EXPIRATION,environment,false,false" >> $workdir/variables.csv
+inject_variables() {
+    local var_string="$1"
+    echo $var_string |\
+    while IFS=',' read -r key value category hcl sensitive
+    do
+        #stamp=`date +%S-%N`
+        stamp=`date +%s@%N`
+
+        tee $logdir/variable-$stamp.json > /dev/null <<EOF
+{
+  "data": {
+    "type":"vars",
+    "attributes": {
+      "key":"$key",
+      "value":"$value",
+      "category":"$category",
+      "hcl":$hcl,
+      "sensitive":$sensitive
+    }
+  },
+  "filter": {
+    "organization": {
+      "username":"$organization"
+    },
+    "workspace": {
+      "name":"$workspace"
+    }
+  }
 }
 
-check_aws_credentials() {
+EOF
+
+
+        local result=$(
+            execute_curl $tfc_token "POST" \
+                "https://${address}/api/v2/vars?filter%5Borganization%5D%5Bname%5D=${organization}&filter%5Bworkspace%5D%5Bname%5D=${workspace}" \
+                "variable-$stamp.json"
+        )
+
+        log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
+        log_success "Adding variable $key in category $category "
+    done  
+}
+
+delete_ws_variables_aws() {
     all_ws_vars=$(
         execute_curl $tfc_token "GET" \
             "https://${address}/api/v2/vars?filter%5Borganization%5D%5Bname%5D=${organization}&filter%5Bworkspace%5D%5Bname%5D=${workspace}"
@@ -194,6 +207,20 @@ check_aws_credentials() {
     [[ $var_id_aws_secret_access_key != "" ]] && execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_secret_access_key"
     [[ $var_id_aws_session_token != "" ]] && execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_session_token"
     [[ $var_id_aws_session_expiration != "" ]] && execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_session_expiration"
+}
+
+
+get_doormat_aws_credentials() {
+    aws_creds=$(doormat aws json -r $doormat_arn)
+      AWS_ACCESS_KEY_ID=$(echo $aws_creds | jq -r ".AccessKeyId")
+      AWS_SECRET_ACCESS_KEY=$(echo $aws_creds | jq -r ".SecretAccessKey")
+      AWS_SESSION_TOKEN=$(echo $aws_creds | jq -r ".SessionToken")
+      AWS_SESSION_EXPIRATION=$(echo $aws_creds | jq -r ".Expiration")
+
+    inject_variables "AWS_ACCESS_KEY_ID,$AWS_ACCESS_KEY_ID,env,false,false"
+    inject_variables "AWS_SECRET_ACCESS_KEY,$AWS_SECRET_ACCESS_KEY,env,false,true"
+    inject_variables "AWS_SESSION_TOKEN,$AWS_SESSION_TOKEN,env,false,true"
+    inject_variables "AWS_SESSION_EXPIRATION,$AWS_SESSION_EXPIRATION,env,false,false"
 }
 
 
@@ -262,6 +289,7 @@ create_variables() {
         log_success "Adding variable $key in category $category "
     done
 }
+
 
 ################################
 # Step 2.1: INJECT CREDENTIALS #
@@ -397,6 +425,28 @@ trigger_run() {
     log_success "A Terraform run on $workspace has been initiated. Link to the run: ${link_to_run}"
 }
 
+
+usage() {
+    echo
+    echo "$(basename "$0") -- programmatically create a Terraform [Cloud|Enterprise] Landing-Zone"
+    echo
+    echo "Create a Workspace, inject Variables, connect VCS repository, assign Policies via API"
+    echo "Publish a VCS-driven pipeline from an administrative perspective"
+    echo "that can be used by a developer or team of developers in a self service manner"
+    echo "(separation of duties)".
+    echo
+    echo "https://github.com/joestack/tfc-api-bootstrap-script.git for more details"
+    echo
+    echo
+    echo "[-h]   Print this help message"
+    echo "[-v]   Version Info"
+    echo "[-c]   Inject AWS cloud credentials to Workspace (only AWS is supported by Doormat)"
+    echo "[-i]   Inject AWS cloud credentials to variables.csv"
+    echo "[-d]   Print Debug output"
+    echo
+}
+
+
 while getopts ":hvcid" opt; do
     case ${opt} in
         h )
@@ -418,8 +468,8 @@ while getopts ":hvcid" opt; do
             check_environment
             check_doormat
             check_tfc_token
-            check_aws_credentials
-            get_aws_credentials
+            delete_ws_variables_aws
+            get_doormat_aws_credentials
             exit 0 # TO BE REMOVED
             ;;
         d )
