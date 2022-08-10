@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220810-01-joestack-dev 
+version=220810-02-joestack-dev 
 
 #set -o xtrace
 
@@ -32,8 +32,6 @@ version=220810-01-joestack-dev
 # TODO: Ensure/CHeck that only the latest cloud credentials exist in variables.csv or as an IDEA: using a dedicated credentials.csv instead of variables.csv 
 
 
-# api_data_dir - The global folder that contains the api-data templates. The existence of that folder in the current directory got precedence!
-#api_data_dir=~/api-data
 workdir=$(pwd)
 logdir=$workdir/logs
 debug=false
@@ -117,17 +115,6 @@ check_variables() {
     fi
 }
 
-# check_api_data() {
-#     if [[ -d $workdir/api-data ]] ; then
-#         log_debug "Using api-data declarations found in $workdir/api-data"
-#         api_data=$workdir/api-data
-#     elif [[ -d $api_data_dir ]] ; then
-#         log_debug "Using api-data declarations found globally in $api_data_dir"
-#         api_data=$api_data_dir
-#     else
-#         log_error "No api-data found. Please provide them in $workdir/api-data or in ~/api-data" && exit 1
-#     fi
-# }
 
 check_tfc_token() {
     if [[ ! -e ~/.terraform.d/credentials.tfrc.json ]] ; then
