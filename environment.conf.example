@@ -31,6 +31,6 @@ trigger_run="true"
 # in case you want to directly attach one or more policies to the workspace
 # the policies must exist within your Terraform organization upfront
 attach_workspace2policyset="false"
-policyset_name="costs, production"
+policyset_name=(costs, production)
 
 

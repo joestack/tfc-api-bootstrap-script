@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220810-02-joestack-dev 
+version=220810-04-joestack-dev 
 
 #set -o xtrace
 
@@ -35,6 +35,7 @@ version=220810-02-joestack-dev
 workdir=$(pwd)
 logdir=$workdir/logs
 debug=false
+stamp=`date +%s@%N`
 
 [[ -d $logdir ]] || mkdir $logdir
 
@@ -168,7 +169,7 @@ inject_variable() {
     local category="$3"
     local hcl="$4"
     local sensitive="$5"
-    stamp=`date +%s@%N`
+    #stamp=`date +%s@%N`
 
     tee $logdir/variable-$stamp.json > /dev/null <<EOF
 {
@@ -241,7 +242,8 @@ attach_workspace2policyset_api() {
 
     local workspace_id="$1"
     local policy_set_id="$2"
-    stamp=`date +%s@%N`
+    local policy_set_name="$3"
+    #stamp=`date +%s@%N`
 
 
         # Create payload.json
@@ -256,13 +258,13 @@ EOF
 
         # Attach the the workspace-id to policy-set-id
         local result_attach_policy_set=$(
-            execute_curl $tfc_token "POST"
+            execute_curl $tfc_token "POST" \
             "https://${address}/api/v2/policy-sets/${policy_set_id}/relationships/workspaces" \
                 "attach-policy-set-${stamp}.json"
         )
 
         log_debug "$(echo -e ${result_attach_policy_set} | jq -cM '. | @text ')"
-        log_success "Policy-Set ${pcs// /} has been attached to Workspace ${workspace}"
+        log_success "Policy-Set ${policy_set_name} has been attached to Workspace ${workspace}"
 
 }
 
@@ -274,8 +276,8 @@ add_vcs_to_workspace_api() {
     local vcs_repo="$2"
     local vcs_provider_oauth_token_id="$3"
 
-    echo add_vcs_to_workspace_api 
-    echo $workspace $vcs_repo $vcs_provider_oauth_token_id
+    #echo add_vcs_to_workspace_api 
+    #echo $workspace $vcs_repo $vcs_provider_oauth_token_id
 
     tee $logdir/workspace-vcs.json > /dev/null <<EOF
 {
@@ -403,7 +405,7 @@ create_variables() {
     grep "^[^#;]" < $workdir/variables.csv | grep '^[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*'|\
     while IFS=',' read -r key value category hcl sensitive
     do
-        stamp=`date +%s@%N`
+        #stamp=`date +%s@%N`
         inject_variable $key $value $category $hcl $sensitive
     done
 }
@@ -432,23 +434,19 @@ attach_workspace2policyset() {
             "https://${address}/api/v2/organizations/${organization}/workspaces" |\
             jq -r ".data[] | select (.attributes.name == \"$workspace\") | .id"
     )
-
-    IFS=',' 
-    for pcs in $policyset_name
+    
+    for i in ${!policyset_name[*]}
     do
-        # Retrieve the ID of the policy-set
-        # ${pcs// /} was ${policyset_name}
-        local result_get_policy_set_id=$(
+        local policy_set_id=$(
             execute_curl $tfc_token "GET" \
                 "https://${address}/api/v2/organizations/${organization}/policy-sets" |\
-                jq -r ".data[] | select (.attributes.name == \"${pcs// /}\") | .id"
+                jq -r ".data[] | select (.attributes.name == \"${policyset_name[$i]// /}\") | .id"
         )
-
-        log_debug "$(echo -e ${result_get_policy_set_id} | jq -cM '. | @text ')"
-
-        echo attach_workspace2policyset_api $workspace_id $result_get_policy_set_id
+    
+        attach_workspace2policyset_api $workspace_id $policy_set_id ${policyset_name[$i]}
 
     done
+
 }
 
 
