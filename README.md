@@ -24,7 +24,4 @@ a) Clone the repo on your local machine (Linux/Mac)
 
 b) Copy the tf_bootstrap_lz.sh script into a folder that is part of your $PATH i.e. /usr/local/bin just to make the script globally available on your system. You can also skip that step and run the script directly from its local folder.
 
-c) Copy the api-data folder to a place on your system (i.e. /usr/local/lib) to make its content globally available as well. You can skip this step and keep the api-data in its local folder. The existens of a local api-data folder has always precedence.
-
-d) If you decided to use a global folder for the api-data, edit the *tf_bootstrap_lz.sh* script and update the *api_data_dir=~/api-data* to your specific requirement (i.e.api_data_dir=/usr/local/lib/api-data). 
-
+c) Define your specific **environments.conf** and **variables.csv** and run the script.
