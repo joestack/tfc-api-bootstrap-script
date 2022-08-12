@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220810-04-joestack-dev 
+version=220812-01-joestack-dev 
 
 #set -o xtrace
 
@@ -35,7 +35,9 @@ version=220810-04-joestack-dev
 workdir=$(pwd)
 logdir=$workdir/logs
 debug=false
-stamp=`date +%s@%N`
+#stamp=`date +%s@%N`
+#stamp=$(`date +%s@%N`)
+
 
 [[ -d $logdir ]] || mkdir $logdir
 
@@ -163,13 +165,13 @@ EOF
 }
 
 
-inject_variable() {
+inject_variable_api() {
     local key="$1"
     local value="$2"
     local category="$3"
     local hcl="$4"
     local sensitive="$5"
-    #stamp=`date +%s@%N`
+    stamp=`date +%s@%N`
 
     tee $logdir/variable-$stamp.json > /dev/null <<EOF
 {
@@ -231,10 +233,10 @@ get_doormat_aws_credentials() {
       AWS_SESSION_TOKEN=$(echo $aws_creds | jq -r ".SessionToken")
       AWS_SESSION_EXPIRATION=$(echo $aws_creds | jq -r ".Expiration")
 
-    inject_variable AWS_ACCESS_KEY_ID $AWS_ACCESS_KEY_ID env false false
-    inject_variable AWS_SECRET_ACCESS_KEY $AWS_SECRET_ACCESS_KEY env false true
-    inject_variable AWS_SESSION_TOKEN $AWS_SESSION_TOKEN env false true
-    inject_variable AWS_SESSION_EXPIRATION $AWS_SESSION_EXPIRATION env false false
+    inject_variable_api AWS_ACCESS_KEY_ID $AWS_ACCESS_KEY_ID env false false
+    inject_variable_api AWS_SECRET_ACCESS_KEY $AWS_SECRET_ACCESS_KEY env false true
+    inject_variable_api AWS_SESSION_TOKEN $AWS_SESSION_TOKEN env false true
+    inject_variable_api AWS_SESSION_EXPIRATION $AWS_SESSION_EXPIRATION env false false
 }
 
 
@@ -243,7 +245,7 @@ attach_workspace2policyset_api() {
     local workspace_id="$1"
     local policy_set_id="$2"
     local policy_set_name="$3"
-    #stamp=`date +%s@%N`
+    stamp=`date +%s@%N`
 
 
         # Create payload.json
@@ -405,8 +407,8 @@ create_variables() {
     grep "^[^#;]" < $workdir/variables.csv | grep '^[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*'|\
     while IFS=',' read -r key value category hcl sensitive
     do
-        #stamp=`date +%s@%N`
-        inject_variable $key $value $category $hcl $sensitive
+        stamp=`date +%s@%N`
+        inject_variable_api $key $value $category $hcl $sensitive
     done
 }
 
@@ -435,15 +437,15 @@ attach_workspace2policyset() {
             jq -r ".data[] | select (.attributes.name == \"$workspace\") | .id"
     )
     
-    for i in ${!policyset_name[*]}
+    for i in ${!policyset_names[*]}
     do
         local policy_set_id=$(
             execute_curl $tfc_token "GET" \
                 "https://${address}/api/v2/organizations/${organization}/policy-sets" |\
-                jq -r ".data[] | select (.attributes.name == \"${policyset_name[$i]// /}\") | .id"
+                jq -r ".data[] | select (.attributes.name == \"${policyset_names[$i]// /}\") | .id"
         )
     
-        attach_workspace2policyset_api $workspace_id $policy_set_id ${policyset_name[$i]}
+        attach_workspace2policyset_api $workspace_id $policy_set_id ${policyset_names[$i]// /}
 
     done
 
