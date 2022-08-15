@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220812-01-joestack-dev 
+version=220815-02-joestack-dev 
 
 #set -o xtrace
 
@@ -386,7 +386,49 @@ EOF
 
 }
 
+destroy_run_api() {
 
+    local result_get_workspace_id=$(
+        execute_curl $tfc_token "GET" \
+            "https://${address}/api/v2/organizations/${organization}/workspaces" |\
+            jq -r ".data[] | select (.attributes.name == \"$workspace\") | .id"
+    )
+    
+    tee $logdir/destroy-run.json > /dev/null <<EOF
+
+{
+  "data": {
+    "attributes": {
+      "message": "Destroy initiated by tf_bootstrap_script",
+      "is-destroy": "true",
+      "auto-apply": "true"	
+    },
+    "type":"runs",
+    "relationships": {
+      "workspace": {
+        "data": {
+          "type": "workspaces",
+          "id": "$result_get_workspace_id"
+        }
+      }
+    }
+  }
+}
+EOF
+
+    local result_destroy_run=$(
+        execute_curl $tfc_token "POST" \
+            "https://${address}/api/v2/runs" "destroy-run.json"
+    )
+
+    local run_id=$(echo $result_destroy_run | jq -r .data.id)
+
+    log_debug "$(echo -e ${result_destroy_run} | jq -cM '. | @text ')"
+
+    local link_to_run="https://${address}/app/${organization}/workspaces/${workspace}/runs/${run_id}"
+    log_success "A Terraform destroy on $workspace has been initiated. Link to the run: ${link_to_run}"
+
+}
 
 ############################
 # Step 1: CREATE WORKSPACE #
@@ -510,15 +552,19 @@ usage() {
     echo
     echo
     echo "[-h]   Print this help message"
-    echo "[-v]   Version Info"
-    echo "[-c]   Inject AWS cloud credentials to Workspace (only AWS is supported by Doormat)"
-    echo "[-i]   Inject AWS cloud credentials to variables.csv"
+    echo "[-V]   Version Info"
+    echo "[-b]   Bootstrap the environment based on environment.conf and variables.csv"
+    echo "[-e]   TODO /PATH/TO/environment.conf - override the workdir as location for the environment.conf file"
+    echo "[-v]   TODO /PATH/TO/variables.csv - override the workdir as location for the variables.csv file"
+    echo "[-c]   Inject AWS cloud credentials to Workspace via Doormat (only AWS is supported by Doormat)"
+    echo "[-i]   Inject AWS cloud credentials via native API calls"
+    echo "[-X]   Destroy run on Workspace to delete all resources"
     echo "[-d]   Print Debug output"
     echo
 }
 
 
-log_info "\nPREREQUISITES:\nPlease make sure that you have a TFC/TFE organization available and configured in the environment.conf. \nIf you are using Sentinel policies, you need to have a TFC organization with Business subscription or TFE with Governance&Policy module enabled. \nThe organization must have a VCS Provider configured as well."
+#log_info "\nPREREQUISITES:\nPlease make sure that you have a TFC/TFE organization available and configured in the environment.conf. \nIf you are using Sentinel policies, you need to have a TFC organization with Business subscription or TFE with Governance&Policy module enabled. \nThe organization must have a VCS Provider configured as well."
 
 is_command_installed "jq"
 is_command_installed "sed"
@@ -529,24 +575,41 @@ is_command_installed "terraform"
 
 
 
-while getopts ":hvcid" opt; do
+while getopts ":hVcidXb" opt; do
     case ${opt} in
         h )
             usage
-            exit 0
+            exit 2
             ;;
-        v )
+        V )
             echo $version
             exit 0
             ;;
+        e )
+            # define path to environment.conf
+            # to override $workdir as default location  
+            ;;
+        v )
+            # define path to variables.csv
+            # to override $workdir as default location
+            ;;
+        X )
+            # Destroy all resouces 
+            # Delete Workspace
+            # ensure to destroy before delete (destroy without delete ->OK, delete without destroy ->NOT)
+            check_environment
+            check_tfc_token
+            destroy_run_api
+            ;; 
         c )
+            # non generic doormat solution that works for AWS only 'doormat aws tf-push ...'
             check_environment
             check_doormat
             check_tfc_token
             inject_cloud_credentials
-            exit 0
             ;; 
         i )
+            # more generic (but doormat seems to be broken when using 'doormat aws -json ...')
             check_environment
             check_doormat
             check_tfc_token
@@ -558,6 +621,21 @@ while getopts ":hvcid" opt; do
             debug=true
             #	    set -o xtrace
             ;;
+        b )
+            # bootstrap main
+            check_environment
+            check_variables
+            check_tfc_token
+            [[ $inject_cloud_credentials = "true" ]] && check_doormat
+            create_workspace
+            create_variables
+            [[ $inject_cloud_credentials = "true" ]] && inject_cloud_credentials
+            #[[ $inject_cloud_credentials = "true" ]] && get_doormat_aws_credentials
+            [[ $attach_workspace2policyset = "true" ]] && attach_workspace2policyset
+            [[ $assign_vcs_to_workspace = "true" ]] && add_vcs_to_workspace
+            add_workspace_settings
+            [[ $trigger_run = "true" ]] && trigger_run
+            ;;
         \? )
             echo "Invalid Option: -$OPTARG" 1>&2
             exit 1
@@ -566,22 +644,22 @@ while getopts ":hvcid" opt; do
 done
 shift $((OPTIND -1))
 
-##################
-## MAIN SECTION ##
-##################
+# ##################
+# ## MAIN SECTION ##
+# ##################
 
-check_environment
-#check_api_data
-check_variables
-check_tfc_token
-[[ $inject_cloud_credentials = "true" ]] && check_doormat
+# check_environment
+# #check_api_data
+# check_variables
+# check_tfc_token
+# [[ $inject_cloud_credentials = "true" ]] && check_doormat
 
-create_workspace
-create_variables
-[[ $inject_cloud_credentials = "true" ]] && inject_cloud_credentials
-#[[ $inject_cloud_credentials = "true" ]] && get_doormat_aws_credentials
-[[ $attach_workspace2policyset = "true" ]] && attach_workspace2policyset
-[[ $assign_vcs_to_workspace = "true" ]] && add_vcs_to_workspace
-add_workspace_settings
-[[ $trigger_run = "true" ]] && trigger_run
+# create_workspace
+# create_variables
+# [[ $inject_cloud_credentials = "true" ]] && inject_cloud_credentials
+# #[[ $inject_cloud_credentials = "true" ]] && get_doormat_aws_credentials
+# [[ $attach_workspace2policyset = "true" ]] && attach_workspace2policyset
+# [[ $assign_vcs_to_workspace = "true" ]] && add_vcs_to_workspace
+# add_workspace_settings
+# [[ $trigger_run = "true" ]] && trigger_run
 
