@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220815-02-joestack-dev 
+version=220818 
 
 #set -o xtrace
 
@@ -35,8 +35,8 @@ version=220815-02-joestack-dev
 workdir=$(pwd)
 logdir=$workdir/logs
 debug=false
-#stamp=`date +%s@%N`
-#stamp=$(`date +%s@%N`)
+#pit=`date +%s@%N`
+#pit=$(`date +%s@%N`)
 
 
 [[ -d $logdir ]] || mkdir $logdir
@@ -138,7 +138,9 @@ check_doormat() {
 
 create_workspace_api() {
     local workspace="$1"
-    tee $logdir/workspace.json > /dev/null <<EOF
+    pit=`date +%s@%N`
+
+    tee $logdir/workspace-$pit.json > /dev/null <<EOF
 
 {
   "data":
@@ -154,7 +156,7 @@ EOF
     # Create workspace
     local result=$(
         execute_curl $tfc_token "POST" \
-            "https://${address}/api/v2/organizations/${organization}/workspaces" "workspace.json"
+            "https://${address}/api/v2/organizations/${organization}/workspaces" "workspace-$pit.json"
     )
 
     log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
@@ -171,9 +173,9 @@ inject_variable_api() {
     local category="$3"
     local hcl="$4"
     local sensitive="$5"
-    stamp=`date +%s@%N`
+    pit=`date +%s@%N`
 
-    tee $logdir/variable-$stamp.json > /dev/null <<EOF
+    tee $logdir/variable-$pit.json > /dev/null <<EOF
 {
   "data": {
     "type":"vars",
@@ -200,7 +202,7 @@ EOF
         local result=$(
             execute_curl $tfc_token "POST" \
                 "https://${address}/api/v2/vars?filter%5Borganization%5D%5Bname%5D=${organization}&filter%5Bworkspace%5D%5Bname%5D=${workspace}" \
-                "variable-$stamp.json"
+                "variable-$pit.json"
         )
 
         log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
@@ -245,11 +247,11 @@ attach_workspace2policyset_api() {
     local workspace_id="$1"
     local policy_set_id="$2"
     local policy_set_name="$3"
-    stamp=`date +%s@%N`
+    pit=`date +%s@%N`
 
 
         # Create payload.json
-        tee $logdir/attach-policy-set-${stamp}.json > /dev/null <<EOF
+        tee $logdir/attach-policy-set-${pit}.json > /dev/null <<EOF
 
 {
   "data": [
@@ -262,7 +264,7 @@ EOF
         local result_attach_policy_set=$(
             execute_curl $tfc_token "POST" \
             "https://${address}/api/v2/policy-sets/${policy_set_id}/relationships/workspaces" \
-                "attach-policy-set-${stamp}.json"
+                "attach-policy-set-${pit}.json"
         )
 
         log_debug "$(echo -e ${result_attach_policy_set} | jq -cM '. | @text ')"
@@ -277,11 +279,13 @@ add_vcs_to_workspace_api() {
     local workspace="$1"
     local vcs_repo="$2"
     local vcs_provider_oauth_token_id="$3"
+    pit=`date +%s@%N`
+
 
     #echo add_vcs_to_workspace_api 
     #echo $workspace $vcs_repo $vcs_provider_oauth_token_id
 
-    tee $logdir/workspace-vcs.json > /dev/null <<EOF
+    tee $logdir/workspace-vcs-$pit.json > /dev/null <<EOF
 {
   "data": {
     "attributes": {
@@ -303,7 +307,7 @@ EOF
     local result=$(
         execute_curl $tfc_token "PATCH" \
             "https://${address}/api/v2/organizations/${organization}/workspaces/${workspace}" \
-            "workspace-vcs.json"
+            "workspace-vcs-$pit.json"
     )
 
     log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
@@ -318,8 +322,10 @@ add_workspace_settings_api() {
     local global_remote_state="$3"
     local auto_apply="$4"
     local queue_all_runs="$5"
+    pit=`date +%s@%N`
 
-        tee $logdir/workspace-settings.json > /dev/null <<EOF
+
+        tee $logdir/workspace-settings-$pit.json > /dev/null <<EOF
 
 {
     "data": {
@@ -340,7 +346,7 @@ EOF
     local result=$(
         execute_curl $tfc_token "PATCH" \
             "https://${address}/api/v2/organizations/${organization}/workspaces/${workspace}" \
-            "workspace-settings.json"
+            "workspace-settings-$pit.json"
     )
 
     log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
@@ -351,8 +357,10 @@ EOF
 trigger_run_api() {
 
     local workspace_id="$1"
+    pit=`date +%s@%N`
 
-        tee $logdir/trigger-run.json > /dev/null <<EOF
+
+        tee $logdir/trigger-run-$pit.json > /dev/null <<EOF
 {
     "data": {
       "attributes": {
@@ -374,7 +382,7 @@ EOF
 
     local result_apply_run=$(
         execute_curl $tfc_token "POST" \
-            "https://${address}/api/v2/runs" "trigger-run.json"
+            "https://${address}/api/v2/runs" "trigger-run-$pit.json"
     )
 
     local run_id=$(echo $result_apply_run | jq -r .data.id)
@@ -388,13 +396,15 @@ EOF
 
 destroy_run_api() {
 
+    pit=`date +%s@%N`
+
     local result_get_workspace_id=$(
         execute_curl $tfc_token "GET" \
             "https://${address}/api/v2/organizations/${organization}/workspaces" |\
             jq -r ".data[] | select (.attributes.name == \"$workspace\") | .id"
     )
     
-    tee $logdir/destroy-run.json > /dev/null <<EOF
+    tee $logdir/destroy-run-$pit.json > /dev/null <<EOF
 
 {
   "data": {
@@ -418,7 +428,7 @@ EOF
 
     local result_destroy_run=$(
         execute_curl $tfc_token "POST" \
-            "https://${address}/api/v2/runs" "destroy-run.json"
+            "https://${address}/api/v2/runs" "destroy-run-$pit.json"
     )
 
     local run_id=$(echo $result_destroy_run | jq -r .data.id)
@@ -449,7 +459,7 @@ create_variables() {
     grep "^[^#;]" < $workdir/variables.csv | grep '^[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*'|\
     while IFS=',' read -r key value category hcl sensitive
     do
-        stamp=`date +%s@%N`
+        pit=`date +%s@%N`
         inject_variable_api $key $value $category $hcl $sensitive
     done
 }
@@ -552,7 +562,6 @@ usage() {
     echo
     echo
     echo "[-h]   Print this help message"
-    echo "[-V]   Version Info"
     echo "[-b]   Bootstrap the environment based on environment.conf and variables.csv"
     echo "[-e]   TODO /PATH/TO/environment.conf - override the workdir as location for the environment.conf file"
     echo "[-v]   TODO /PATH/TO/variables.csv - override the workdir as location for the variables.csv file"
@@ -560,11 +569,12 @@ usage() {
     echo "[-i]   Inject AWS cloud credentials via native API calls"
     echo "[-X]   Destroy run on Workspace to delete all resources"
     echo "[-d]   Print Debug output"
+    echo "[-V]   Version Info"
     echo
 }
 
 
-#log_info "\nPREREQUISITES:\nPlease make sure that you have a TFC/TFE organization available and configured in the environment.conf. \nIf you are using Sentinel policies, you need to have a TFC organization with Business subscription or TFE with Governance&Policy module enabled. \nThe organization must have a VCS Provider configured as well."
+log_debug "\nPREREQUISITES:\nPlease make sure that you have a TFC/TFE organization available and configured in the environment.conf. \nIf you are using Sentinel policies, you need to have a TFC organization with Business subscription or TFE with Governance&Policy module enabled. \nThe organization must have a VCS Provider configured as well."
 
 is_command_installed "jq"
 is_command_installed "sed"
