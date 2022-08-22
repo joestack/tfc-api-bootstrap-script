@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220818 
+version=220822 
 
 #set -o xtrace
 
@@ -440,6 +440,10 @@ EOF
 
 }
 
+
+# MAIN WORKFLOW 
+# the [-b] flag
+
 ############################
 # Step 1: CREATE WORKSPACE #
 ############################
@@ -653,23 +657,3 @@ while getopts ":hVcidXb" opt; do
     esac
 done
 shift $((OPTIND -1))
-
-# ##################
-# ## MAIN SECTION ##
-# ##################
-
-# check_environment
-# #check_api_data
-# check_variables
-# check_tfc_token
-# [[ $inject_cloud_credentials = "true" ]] && check_doormat
-
-# create_workspace
-# create_variables
-# [[ $inject_cloud_credentials = "true" ]] && inject_cloud_credentials
-# #[[ $inject_cloud_credentials = "true" ]] && get_doormat_aws_credentials
-# [[ $attach_workspace2policyset = "true" ]] && attach_workspace2policyset
-# [[ $assign_vcs_to_workspace = "true" ]] && add_vcs_to_workspace
-# add_workspace_settings
-# [[ $trigger_run = "true" ]] && trigger_run
-

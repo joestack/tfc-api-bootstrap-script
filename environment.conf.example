@@ -24,7 +24,6 @@ assign_vcs_to_workspace="true"
 # can be found in the Terraform UI under Settings > Version Control > Providers
 vcs_provider_oauth_token_id="ot-blablabla"
 # the VCS repo that you want to connect to the workspace
-# please note to escape specific characters like the "/" between the VSC org name and the repo name
 vcs_repo="joestack/tfc-aws-hashistack"
 # trigger run immediately (by executing this script)
 trigger_run="true"
