@@ -38,11 +38,8 @@ debug=false
 #pit=`date +%s@%N`
 #pit=$(`date +%s@%N`)
 
-
 [[ -d $logdir ]] || mkdir $logdir
-
 cd $logdir
-
 
 # Utility function to log output
 log() {
@@ -60,7 +57,6 @@ log_success()   { log "$1" "SUCCESS" "\033[1;32m"; }
 log_error()     { log "$1" "ERROR" "\033[1;31m"; }
 
 # Utility function to simplify curl calls and handle relevant return codes
-
 execute_curl() {
     local token="$1"
     local http_method="$2"
@@ -535,12 +531,14 @@ usage() {
 
 log_debug "\nPREREQUISITES:\nPlease make sure that you have a TFC/TFE organization available and configured in the environment.conf. \nIf you are using Sentinel policies, you need to have a TFC organization with Business subscription or TFE with Governance&Policy module enabled. \nThe organization must have a VCS Provider configured as well."
 
-is_command_installed "jq"
-is_command_installed "sed"
-is_command_installed "doormat"
-is_command_installed "grep"
-is_command_installed "curl"
-is_command_installed "terraform"
+are_commands_installed() {
+    is_command_installed "jq"
+    is_command_installed "sed"
+    is_command_installed "doormat"
+    is_command_installed "grep"
+    is_command_installed "curl"
+    is_command_installed "terraform"
+}
 
 while getopts ":hVciXbd" opt; do
     case ${opt} in
@@ -564,12 +562,14 @@ while getopts ":hVciXbd" opt; do
             # Destroy all resouces 
             # Delete Workspace
             # ensure to destroy before delete (destroy without delete ->OK, delete without destroy ->NOT)
+	    are_commands_installed
             check_environment
             check_tfc_token
             destroy_run_api
             ;; 
         c )
             # non generic doormat solution that works for AWS only 'doormat aws tf-push ...'
+	    are_commands_installed
             check_environment
             check_doormat
             check_tfc_token
@@ -577,6 +577,7 @@ while getopts ":hVciXbd" opt; do
             ;; 
         i )
             # more generic (but doormat seems to be broken when using 'doormat aws -json ...')
+	    are_commands_installed
             check_environment
             check_doormat
             check_tfc_token
@@ -584,11 +585,9 @@ while getopts ":hVciXbd" opt; do
             get_doormat_aws_credentials
             exit 0 # TO BE REMOVED
             ;;
-        d )
-            debug=true
-            ;;
-        b )
+       b )
             # bootstrap main
+	    are_commands_installed
             check_environment
             check_variables
             check_tfc_token
@@ -601,6 +600,9 @@ while getopts ":hVciXbd" opt; do
             [[ $assign_vcs_to_workspace = "true" ]] && add_vcs_to_workspace
             add_workspace_settings
             [[ $trigger_run = "true" ]] && trigger_run
+            ;;
+         d )
+            debug=true
             ;;
         \? )
             echo "Invalid Option: -$OPTARG" 1>&2
