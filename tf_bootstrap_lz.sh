@@ -118,7 +118,6 @@ check_variables() {
     fi
 }
 
-
 check_tfc_token() {
     if [[ ! -e ~/.terraform.d/credentials.tfrc.json ]] ; then
         log_error "No TFC/TFE token found. Please execute 'terraform login'" && exit 1
@@ -163,9 +162,7 @@ EOF
 
     local link_to_workspace="https://${address}/app/${organization}/workspaces/${workspace}"
     log_success "Workspace $workspace has been created. Link to the workspace: ${link_to_workspace}"
-
 }
-
 
 inject_variable_api() {
     local key="$1"
@@ -199,41 +196,44 @@ inject_variable_api() {
 EOF
 
 
-        local result=$(
-            execute_curl $tfc_token "POST" \
+    local result=$(
+        execute_curl $tfc_token "POST" \
                 "https://${address}/api/v2/vars?filter%5Borganization%5D%5Bname%5D=${organization}&filter%5Bworkspace%5D%5Bname%5D=${workspace}" \
                 "variable-$pit.json"
         )
 
-        log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
-        log_success "Adding variable $key in category $category "
+    log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
+    log_success "Adding variable $key in category $category "
 }
 
 delete_ws_variables_aws() {
-    all_ws_vars=$(
+    local all_ws_vars=$(
         execute_curl $tfc_token "GET" \
             "https://${address}/api/v2/vars?filter%5Borganization%5D%5Bname%5D=${organization}&filter%5Bworkspace%5D%5Bname%5D=${workspace}"
     )
 
-    var_id_aws_access_key_id=$(echo $all_ws_vars | jq -r ".data[] | select (.attributes.key == \"AWS_ACCESS_KEY_ID\") | .id ")
-    var_id_aws_secret_access_key=$(echo $all_ws_vars | jq -r ".data[] | select (.attributes.key == \"AWS_SECRET_ACCESS_KEY\") | .id ")
-    var_id_aws_session_token=$(echo $all_ws_vars | jq -r ".data[] | select (.attributes.key == \"AWS_SESSION_TOKEN\") | .id ")
-    var_id_aws_session_expiration=$(echo $all_ws_vars | jq -r ".data[] | select (.attributes.key == \"AWS_SESSION_EXPIRATION\") | .id ")
+    local var_id_aws_access_key_id=$(echo $all_ws_vars | jq -r ".data[] | select (.attributes.key == \"AWS_ACCESS_KEY_ID\") | .id ")
+    local var_id_aws_secret_access_key=$(echo $all_ws_vars | jq -r ".data[] | select (.attributes.key == \"AWS_SECRET_ACCESS_KEY\") | .id ")
+    local var_id_aws_session_token=$(echo $all_ws_vars | jq -r ".data[] | select (.attributes.key == \"AWS_SESSION_TOKEN\") | .id ")
+    local var_id_aws_session_expiration=$(echo $all_ws_vars | jq -r ".data[] | select (.attributes.key == \"AWS_SESSION_EXPIRATION\") | .id ")
     
 
-    [[ $var_id_aws_access_key_id != "" ]] && execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_access_key_id"
-    [[ $var_id_aws_secret_access_key != "" ]] && execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_secret_access_key"
-    [[ $var_id_aws_session_token != "" ]] && execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_session_token"
-    [[ $var_id_aws_session_expiration != "" ]] && execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_session_expiration"
+    [[ $var_id_aws_access_key_id != "" ]] && \
+	    execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_access_key_id"
+    [[ $var_id_aws_secret_access_key != "" ]] && \
+	    execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_secret_access_key"
+    [[ $var_id_aws_session_token != "" ]] && \
+	    execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_session_token"
+    [[ $var_id_aws_session_expiration != "" ]] && \
+	    execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_session_expiration"
 }
 
-
 get_doormat_aws_credentials() {
-    aws_creds=$(doormat aws json -r $doormat_arn)
-      AWS_ACCESS_KEY_ID=$(echo $aws_creds | jq -r ".AccessKeyId")
-      AWS_SECRET_ACCESS_KEY=$(echo $aws_creds | jq -r ".SecretAccessKey")
-      AWS_SESSION_TOKEN=$(echo $aws_creds | jq -r ".SessionToken")
-      AWS_SESSION_EXPIRATION=$(echo $aws_creds | jq -r ".Expiration")
+    local aws_creds=$(doormat aws json -r $doormat_arn)
+    local AWS_ACCESS_KEY_ID=$(echo $aws_creds | jq -r ".AccessKeyId")
+    local AWS_SECRET_ACCESS_KEY=$(echo $aws_creds | jq -r ".SecretAccessKey")
+    local AWS_SESSION_TOKEN=$(echo $aws_creds | jq -r ".SessionToken")
+    local AWS_SESSION_EXPIRATION=$(echo $aws_creds | jq -r ".Expiration")
 
     inject_variable_api AWS_ACCESS_KEY_ID $AWS_ACCESS_KEY_ID env false false
     inject_variable_api AWS_SECRET_ACCESS_KEY $AWS_SECRET_ACCESS_KEY env false true
@@ -241,18 +241,14 @@ get_doormat_aws_credentials() {
     inject_variable_api AWS_SESSION_EXPIRATION $AWS_SESSION_EXPIRATION env false false
 }
 
-
 attach_workspace2policyset_api() {
-
     local workspace_id="$1"
     local policy_set_id="$2"
     local policy_set_name="$3"
     pit=`date +%s@%N`
 
-
-        # Create payload.json
-        tee $logdir/attach-policy-set-${pit}.json > /dev/null <<EOF
-
+    # Create payload.json
+    tee $logdir/attach-policy-set-${pit}.json > /dev/null <<EOF
 {
   "data": [
     { "id": "$workspace_id", "type": "workspaces" }
@@ -260,30 +256,22 @@ attach_workspace2policyset_api() {
 }
 EOF
 
-        # Attach the the workspace-id to policy-set-id
-        local result_attach_policy_set=$(
-            execute_curl $tfc_token "POST" \
+    # Attach the the workspace-id to policy-set-id
+    local result_attach_policy_set=$(
+        execute_curl $tfc_token "POST" \
             "https://${address}/api/v2/policy-sets/${policy_set_id}/relationships/workspaces" \
                 "attach-policy-set-${pit}.json"
         )
 
-        log_debug "$(echo -e ${result_attach_policy_set} | jq -cM '. | @text ')"
-        log_success "Policy-Set ${policy_set_name} has been attached to Workspace ${workspace}"
-
+    log_debug "$(echo -e ${result_attach_policy_set} | jq -cM '. | @text ')"
+    log_success "Policy-Set ${policy_set_name} has been attached to Workspace ${workspace}"
 }
 
-
-
 add_vcs_to_workspace_api() {
-
     local workspace="$1"
     local vcs_repo="$2"
     local vcs_provider_oauth_token_id="$3"
     pit=`date +%s@%N`
-
-
-    #echo add_vcs_to_workspace_api 
-    #echo $workspace $vcs_repo $vcs_provider_oauth_token_id
 
     tee $logdir/workspace-vcs-$pit.json > /dev/null <<EOF
 {
@@ -314,9 +302,7 @@ EOF
     log_success "VCS repo has been connected to workspace ${workspace}."
 }
 
-
 add_workspace_settings_api() {
-
     local workspace="$1"
     local terraform_version="$2"
     local global_remote_state="$3"
@@ -324,9 +310,7 @@ add_workspace_settings_api() {
     local queue_all_runs="$5"
     pit=`date +%s@%N`
 
-
-        tee $logdir/workspace-settings-$pit.json > /dev/null <<EOF
-
+    tee $logdir/workspace-settings-$pit.json > /dev/null <<EOF
 {
     "data": {
       "attributes": {
@@ -339,7 +323,6 @@ add_workspace_settings_api() {
       "type": "workspaces"
     }
   }
-
 EOF
 
     # Patch workspace
@@ -351,16 +334,13 @@ EOF
 
     log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
     log_success "Workspace settings have been successfully applied."
-
 }
 
 trigger_run_api() {
-
     local workspace_id="$1"
     pit=`date +%s@%N`
 
-
-        tee $logdir/trigger-run-$pit.json > /dev/null <<EOF
+    tee $logdir/trigger-run-$pit.json > /dev/null <<EOF
 {
     "data": {
       "attributes": {
@@ -379,7 +359,6 @@ trigger_run_api() {
 }
 EOF
 
-
     local result_apply_run=$(
         execute_curl $tfc_token "POST" \
             "https://${address}/api/v2/runs" "trigger-run-$pit.json"
@@ -391,11 +370,9 @@ EOF
 
     local link_to_run="https://${address}/app/${organization}/workspaces/${workspace}/runs/${run_id}"
     log_success "A Terraform run on $workspace has been initiated. Link to the run: ${link_to_run}"
-
 }
 
 destroy_run_api() {
-
     pit=`date +%s@%N`
 
     local result_get_workspace_id=$(
@@ -405,7 +382,6 @@ destroy_run_api() {
     )
     
     tee $logdir/destroy-run-$pit.json > /dev/null <<EOF
-
 {
   "data": {
     "attributes": {
@@ -437,9 +413,7 @@ EOF
 
     local link_to_run="https://${address}/app/${organization}/workspaces/${workspace}/runs/${run_id}"
     log_success "A Terraform destroy on $workspace has been initiated. Link to the run: ${link_to_run}"
-
 }
-
 
 # MAIN WORKFLOW 
 # the [-b] flag
@@ -448,17 +422,13 @@ EOF
 # Step 1: CREATE WORKSPACE #
 ############################
 create_workspace() {
-
     create_workspace_api $workspace
-
 }
-
 
 #########################################
 # Step 2: ASSIGN VARIABLES TO WORKSPACE #
 #########################################
 create_variables() {
-
     # Add variables to workspace
     grep "^[^#;]" < $workdir/variables.csv | grep '^[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*'|\
     while IFS=',' read -r key value category hcl sensitive
@@ -467,7 +437,6 @@ create_variables() {
         inject_variable_api $key $value $category $hcl $sensitive
     done
 }
-
 
 ################################
 # Step 2.1: INJECT CREDENTIALS #
@@ -480,7 +449,6 @@ inject_cloud_credentials() {
     fi
     log_success "Cloud credentials have been injected into the workspace via doormat."
 }
-
 
 #########################################################
 # Step 3.1: ATTACH POLICY-SET TO WORKSPACE #
@@ -502,17 +470,13 @@ attach_workspace2policyset() {
         )
     
         attach_workspace2policyset_api $workspace_id $policy_set_id ${policyset_names[$i]// /}
-
     done
-
 }
-
 
 ########################################
 # Step 4: ASSIGN VCS REPO TO WORKSPACE #
 ########################################
 add_vcs_to_workspace() {
-
     if [[ "$vcs_repo" == *\\* ]]
     then
         vcs_repo=$vcs_repo
@@ -521,25 +485,19 @@ add_vcs_to_workspace() {
     fi
    
     add_vcs_to_workspace_api $workspace $vcs_repo $vcs_provider_oauth_token_id
- 
 }
-
 
 ###############################################
 # Step 5: ADDING ALL OTHER WORKSPACE SETTINGS #
 ###############################################
 add_workspace_settings() {
-
     add_workspace_settings_api $workspace $terraform_version $global_remote_state $auto_apply $queue_all_runs
-
 }
-
 
 #######################################
 # Step 6: TRIGGER A RUN ON WORKSPACE  #
 #######################################
 trigger_run() {
-
     local result_get_workspace_id=$(
         execute_curl $tfc_token "GET" \
             "https://${address}/api/v2/organizations/${organization}/workspaces" |\
@@ -549,9 +507,7 @@ trigger_run() {
     log_debug "Workspace ID: ${result_get_workspace_id}"
 
     trigger_run_api $result_get_workspace_id
-
 }
-
 
 usage() {
     echo
@@ -577,7 +533,6 @@ usage() {
     echo
 }
 
-
 log_debug "\nPREREQUISITES:\nPlease make sure that you have a TFC/TFE organization available and configured in the environment.conf. \nIf you are using Sentinel policies, you need to have a TFC organization with Business subscription or TFE with Governance&Policy module enabled. \nThe organization must have a VCS Provider configured as well."
 
 is_command_installed "jq"
@@ -586,8 +541,6 @@ is_command_installed "doormat"
 is_command_installed "grep"
 is_command_installed "curl"
 is_command_installed "terraform"
-
-
 
 while getopts ":hVciXbd" opt; do
     case ${opt} in
