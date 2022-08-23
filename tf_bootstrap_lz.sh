@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220822 
+version=220823
 
 #set -o xtrace
 
@@ -589,7 +589,7 @@ is_command_installed "terraform"
 
 
 
-while getopts ":hVcidXb" opt; do
+while getopts ":hVciXbd" opt; do
     case ${opt} in
         h )
             usage
@@ -633,7 +633,6 @@ while getopts ":hVcidXb" opt; do
             ;;
         d )
             debug=true
-            #	    set -o xtrace
             ;;
         b )
             # bootstrap main
