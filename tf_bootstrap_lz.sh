@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220823
+version=220825
 
 #set -o xtrace
 
@@ -300,10 +300,10 @@ EOF
 
 add_workspace_settings_api() {
     local workspace="$1"
-    local terraform_version="$2"
-    local global_remote_state="$3"
-    local auto_apply="$4"
-    local queue_all_runs="$5"
+    local global_remote_state="$2"
+    local auto_apply="$3"
+    local queue_all_runs="$4"
+    local terraform_version="$5"
     pit=`date +%s@%N`
 
     tee $logdir/workspace-settings-$pit.json > /dev/null <<EOF
@@ -487,7 +487,7 @@ add_vcs_to_workspace() {
 # Step 5: ADDING ALL OTHER WORKSPACE SETTINGS #
 ###############################################
 add_workspace_settings() {
-    add_workspace_settings_api $workspace $terraform_version $global_remote_state $auto_apply $queue_all_runs
+    add_workspace_settings_api $workspace $global_remote_state $auto_apply $queue_all_runs $terraform_version
 }
 
 #######################################
@@ -519,10 +519,10 @@ usage() {
     echo
     echo "[-h]   Print this help message"
     echo "[-b]   Bootstrap the environment based on environment.conf and variables.csv"
-    echo "[-e]   TODO /PATH/TO/environment.conf - override the workdir as location for the environment.conf file"
-    echo "[-v]   TODO /PATH/TO/variables.csv - override the workdir as location for the variables.csv file"
+    #echo "[-e]   TODO /PATH/TO/environment.conf - override the workdir as location for the environment.conf file"
+    #echo "[-v]   TODO /PATH/TO/variables.csv - override the workdir as location for the variables.csv file"
     echo "[-c]   Inject AWS cloud credentials to Workspace via Doormat (only AWS is supported by Doormat)"
-    echo "[-i]   Inject AWS cloud credentials via native API calls"
+    #echo "[-i]   Inject AWS cloud credentials via native API calls"
     echo "[-X]   Destroy run on Workspace to delete all resources"
     echo "[-d]   Print Debug output"
     echo "[-V]   Version Info"
