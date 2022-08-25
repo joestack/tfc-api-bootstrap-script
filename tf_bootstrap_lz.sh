@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220825-02
+version=220825-03
 
 #set -o xtrace
 
@@ -244,7 +244,7 @@ attach_workspace2policyset_api() {
     pit=`date +%s@%N`
 
     # Create payload.json
-    tee $logdir/attach-policy-set-${pit}.json > /dev/null <<EOF
+    tee $logdir/attach-policy-set-$pit.json > /dev/null <<EOF
 {
   "data": [
     { "id": "$workspace_id", "type": "workspaces" }
@@ -256,7 +256,7 @@ EOF
     local result_attach_policy_set=$(
         execute_curl $tfc_token "POST" \
             "https://${address}/api/v2/policy-sets/${policy_set_id}/relationships/workspaces" \
-                "attach-policy-set-${pit}.json"
+                "attach-policy-set-$pit.json"
         )
 
     log_debug "$(echo -e ${result_attach_policy_set} | jq -cM '. | @text ')"
