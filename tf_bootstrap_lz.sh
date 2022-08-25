@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220825
+version=220825-02
 
 #set -o xtrace
 
@@ -426,7 +426,8 @@ create_workspace() {
 #########################################
 create_variables() {
     # Add variables to workspace
-    grep "^[^#;]" < $workdir/variables.csv | grep '^[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*'|\
+    #grep "^[^#;]" < $workdir/variables.csv | grep '^[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*,[[:alpha:]].*'|\
+    grep "^[^#;]" < $workdir/variables.csv |\
     while IFS=',' read -r key value category hcl sensitive
     do
         pit=`date +%s@%N`
