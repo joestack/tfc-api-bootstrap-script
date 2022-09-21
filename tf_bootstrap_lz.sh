@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220825-03
+version=220921
 
 #set -o xtrace
 
@@ -411,6 +411,25 @@ EOF
     log_success "A Terraform destroy on $workspace has been initiated. Link to the run: ${link_to_run}"
 }
 
+delete_workspace_api() {
+    pit=`date +%s@%N`
+
+    # local result_get_workspace_id=$(
+    #     execute_curl $tfc_token "GET" \
+    #         "https://${address}/api/v2/organizations/${organization}/workspaces" |\
+    #         jq -r ".data[] | select (.attributes.name == \"$workspace\") | .id"
+    # )
+    
+    local result_delete_workspace=$(
+        execute_curl $tfc_token "DELETE" \
+            "https://${address}/api/v2/organizations/${organization}/workspaces/${workspace}" 
+    )
+
+    log_debug "$(echo -e ${result_delete_workspace} | jq -cM '. | @text ')"
+    log_success "Terraform Workspace $workspace has been deleted."
+
+}
+
 # MAIN WORKFLOW 
 # the [-b] flag
 
@@ -524,7 +543,8 @@ usage() {
     #echo "[-v]   TODO /PATH/TO/variables.csv - override the workdir as location for the variables.csv file"
     echo "[-c]   Inject AWS cloud credentials to Workspace via Doormat (only AWS is supported by Doormat)"
     #echo "[-i]   Inject AWS cloud credentials via native API calls"
-    echo "[-X]   Destroy run on Workspace to delete all resources"
+    echo "[-x]   Destroy run on Workspace to delete all resources"
+    echo "[-X]   Delete Workspace (DANGER!!! Be sure no unmanaged resources are left)"
     echo "[-d]   Print Debug output"
     echo "[-V]   Version Info"
     echo
@@ -541,7 +561,7 @@ are_commands_installed() {
     is_command_installed "terraform"
 }
 
-while getopts ":hVciXbd" opt; do
+while getopts ":hVcixXbd" opt; do
     case ${opt} in
         h )
             usage
@@ -551,6 +571,9 @@ while getopts ":hVciXbd" opt; do
             echo $version
             exit 0
             ;;
+        d )
+            debug=true
+            ;;
         e )
             # define path to environment.conf
             # to override $workdir as default location  
@@ -559,7 +582,7 @@ while getopts ":hVciXbd" opt; do
             # define path to variables.csv
             # to override $workdir as default location
             ;;
-        X )
+        x )
             # Destroy all resouces 
             # Delete Workspace
             # ensure to destroy before delete (destroy without delete ->OK, delete without destroy ->NOT)
@@ -567,6 +590,16 @@ while getopts ":hVciXbd" opt; do
             check_environment
             check_tfc_token
             destroy_run_api
+            exit 0 # just to prevent -xX
+            ;; 
+        X )
+            # Destroy all resouces 
+            # Delete Workspace
+            # ensure to destroy before delete (destroy without delete ->OK, delete without destroy ->NOT)
+	    are_commands_installed
+            check_environment
+            check_tfc_token
+            delete_workspace_api
             ;; 
         c )
             # non generic doormat solution that works for AWS only 'doormat aws tf-push ...'
@@ -584,7 +617,7 @@ while getopts ":hVciXbd" opt; do
             check_tfc_token
             delete_ws_variables_aws
             get_doormat_aws_credentials
-            exit 0 # TO BE REMOVED
+            #exit 0 # TO BE REMOVED
             ;;
        b )
             # bootstrap main
@@ -601,9 +634,6 @@ while getopts ":hVciXbd" opt; do
             [[ $assign_vcs_to_workspace = "true" ]] && add_vcs_to_workspace
             add_workspace_settings
             [[ $trigger_run = "true" ]] && trigger_run
-            ;;
-         d )
-            debug=true
             ;;
         \? )
             echo "Invalid Option: -$OPTARG" 1>&2
