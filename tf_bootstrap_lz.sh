@@ -1,5 +1,5 @@
 #!/bin/bash
-version=220921
+version=221207
 
 #set -o xtrace
 
@@ -555,7 +555,7 @@ log_debug "\nPREREQUISITES:\nPlease make sure that you have a TFC/TFE organizati
 are_commands_installed() {
     is_command_installed "jq"
     is_command_installed "sed"
-    is_command_installed "doormat"
+    [[ $inject_cloud_credentials = "true" ]] && is_command_installed "doormat"
     is_command_installed "grep"
     is_command_installed "curl"
     is_command_installed "terraform"
