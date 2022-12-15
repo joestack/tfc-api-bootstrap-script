@@ -161,11 +161,13 @@ EOF
 }
 
 inject_variable_api() {
-    local key="$1"
-    local value="$2"
-    local category="$3"
-    local hcl="$4"
-    local sensitive="$5"
+    # // This block is problematic because it will wrongly interpret blanks in $value
+    #local key="$1"
+    #local value="$2"
+    #local category="$3"
+    #local hcl="$4"
+    #local sensitive="$5"
+    # //
     pit=`date +%s@%N`
 
     tee $logdir/variable-$pit.json > /dev/null <<EOF
@@ -561,7 +563,7 @@ are_commands_installed() {
     is_command_installed "terraform"
 }
 
-while getopts ":hVcixXbd" opt; do
+while getopts ":hVdcixXb" opt; do
     case ${opt} in
         h )
             usage
