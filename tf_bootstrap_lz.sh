@@ -1,5 +1,5 @@
 #!/bin/bash
-version=221207
+version=230313
 
 #set -o xtrace
 
@@ -640,7 +640,7 @@ while getopts ":hVdcCixXb" opt; do
             get_doormat_aws_credentials
             #exit 0 # TO BE REMOVED
             ;;
-       b )
+        b )
             # bootstrap main
 	    are_commands_installed
             check_environment
