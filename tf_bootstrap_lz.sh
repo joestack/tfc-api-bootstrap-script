@@ -468,6 +468,16 @@ inject_cloud_credentials() {
     log_success "Cloud credentials have been injected into the workspace via doormat."
 }
 
+inject_cloud_credentials_as_set() {
+    if [[ "${debug}" = "true" ]]; then
+        doormat aws -r $doormat_arn tf-push variable-set --id $varset 
+    else
+        doormat aws -r $doormat_arn tf-push variable-set --id $varset &> /dev/null
+    fi
+    log_success "Cloud credentials have been injected into the variable-set via doormat."
+}
+
+
 #########################################################
 # Step 3.1: ATTACH POLICY-SET TO WORKSPACE #
 #########################################################
@@ -544,6 +554,7 @@ usage() {
     #echo "[-e]   TODO /PATH/TO/environment.conf - override the workdir as location for the environment.conf file"
     #echo "[-v]   TODO /PATH/TO/variables.csv - override the workdir as location for the variables.csv file"
     echo "[-c]   Inject AWS cloud credentials to Workspace via Doormat (only AWS is supported by Doormat)"
+    echo "[-C]   Inject AWS cloud credentials as Variable-Set via Doormat (only AWS is supported by Doormat)"
     #echo "[-i]   Inject AWS cloud credentials via native API calls"
     echo "[-x]   Destroy run on Workspace to delete all resources"
     echo "[-X]   Delete Workspace (DANGER!!! Be sure no unmanaged resources are left)"
@@ -563,7 +574,7 @@ are_commands_installed() {
     is_command_installed "terraform"
 }
 
-while getopts ":hVdcixXb" opt; do
+while getopts ":hVdcCixXb" opt; do
     case ${opt} in
         h )
             usage
@@ -610,6 +621,14 @@ while getopts ":hVdcixXb" opt; do
             check_doormat
             check_tfc_token
             inject_cloud_credentials
+            ;; 
+        C )
+            # non generic doormat solution that works for AWS only 'doormat aws tf-push ...'
+	    are_commands_installed
+            check_environment
+            check_doormat
+            check_tfc_token
+            inject_cloud_credentials_as_set
             ;; 
         i )
             # more generic (but doormat seems to be broken when using 'doormat aws -json ...')
