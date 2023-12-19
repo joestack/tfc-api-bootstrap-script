@@ -1,23 +1,9 @@
 #!/bin/bash
-version=230313
+version=231219
 
 #set -o xtrace
 
 ##TODO
-# DONE: check if jq is installed
-# DONE: add command line feature to inject/give precedence to a environment.conf and variables.csv
-# DONE: add command line feature to renew cloud credentials only
-# DONE: make the script and api-data libraries globally available
-# DONE: and give local existence of api-data precedence
-# TODO: PRIO add azure and gcp cloud credentials. A combination of several cloud providers should be possible also.
-#       IMPEDIMENT: DOORMAT still sucks. Each cloud provider has its own workflow/capabilities. 
-# DONE: improve debugging capabilities
-# DONE: Add log and is command installed utility functions
-# TODO: Validate environment.conf
-# DONE: Validate variables.csv
-# DONE: Remove necessity for escapes in environment.conf
-# DONE: Simplify curl executions -> utility function
-# DONE: move command check to debug
 # TODO: -a path to API data (prio1), local prio2, global (prio3), otherwise error
 # TODO: -e environment.conf -> see -a
 # IDEA: inject_variable=true/false flag
