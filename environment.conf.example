@@ -1,33 +1,48 @@
 # address of the API endpoint of your Terrform Enterprise/Cloud service.
 # app.terraform.io is the default for Terraform Cloud 
 address="app.terraform.io"
+
 # The Terraform Oranization we want to work with
 organization="joestack"
+
 # the name of the workspace we are going to create
 workspace="tfc-aws-hashistack"
+
+# HashiCorp Internal: 
 # as HashiCorp empoyee we use Doormat to inject cloud credentials dynamically
 # as non HashiCorp empoyee set it to false and ignore the doormat_arn
 inject_cloud_credentials="false"
 doormat_arn="arn:aws:iam::1234567890:role/test_demos_dev-tester"
-varset="varset-6Dhfrewgbu7few"
+# If varset="" cloud credentials are injected into workspace otherwise into a varset  
+varset="Provider_Credentials"
+
 # as good best practices we stick to a specific Terraform version
 terraform_version="1.6.6"
+
 # in case you want a workflow that automatically triggers the apply afer a successful plan   
 auto_apply="true"
+
 # When set to false, runs triggered by a VCS change will not be queued until at least one run is manually queued.
+# should be false if trigger_run is set to true 
 queue_all_runs="false"
+
 # in case you want to share state-file information across worspaces within the Terraform organization
 global_remote_state="true"
+
 # in case you want to assign a VCS repo to the workspace
 # If set to "true" we need the vcs_provider_oauth_token_id as well
 assign_vcs_to_workspace="true" 
+
 # the oauth_token_id of your specific VCS Provider within your Terraform organization
 # can be found in the Terraform UI under Settings > Version Control > Providers
 vcs_provider_oauth_token_id="ot-blablabla"
+
 # the VCS repo that you want to connect to the workspace
 vcs_repo="joestack/tfc-aws-hashistack"
+
 # trigger run immediately (by executing this script)
 trigger_run="true"
+
 # in case you want to directly attach one or more policies to the workspace
 # the policies must exist within your Terraform organization upfront
 attach_workspace2policyset="false"

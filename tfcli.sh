@@ -1,21 +1,7 @@
 #!/bin/bash
-version=231219
+version=231219-2
 
 #set -o xtrace
-
-##TODO
-# TODO: -a path to API data (prio1), local prio2, global (prio3), otherwise error
-# TODO: -e environment.conf -> see -a
-# IDEA: inject_variable=true/false flag
-# IDEA: multiple levels of output -> like openssh -vvv
-# DONE: generic approach to inject AWS cloud credentials into variables.csv
-# TODO: generic approach to inject AZ cloud credentials into variables.csv
-# TODO: generic approach to inject GCP cloud credentials into variables.csv
-# TODO: Proper API call handling to update existing cloud credentials to workspace (PATCH or DELETE and CREATE
-#       DONE: in case of AWS. Delete AWS Workspace Variables (credentials) if they exist
-#       TODO: Azure
-#       TODO: GCP 
-# TODO: Ensure/CHeck that only the latest cloud credentials exist in variables.csv or as an IDEA: using a dedicated credentials.csv instead of variables.csv 
 
 
 workdir=$(pwd)
@@ -146,6 +132,35 @@ EOF
     log_success "Workspace $workspace has been created. Link to the workspace: ${link_to_workspace}"
 }
 
+create_varset_api() {
+    local varset="$1"
+    pit=`date +%s@%N`
+
+    tee $logdir/varset-$pit.json > /dev/null <<EOF
+{
+  "data": {
+    "type": "varsets",
+    "attributes": {
+      "name": "${varset}",
+      "description": "Provider Credentials",
+      "global": true,
+      "priority": false
+    }
+  }
+}
+EOF
+
+    local result=$(
+        execute_curl $tfc_token "POST" \
+               "https://${address}/api/v2/organizations/${organization}/varsets" \
+               "varset-$pit.json"
+    )
+
+    log_debug "$(echo -e ${result} | jq -cM '. | @text ')"
+    log_success "Adding varset $varset to organization $organization "
+}
+
+
 inject_variable_api() {
     # // This block is problematic because it will wrongly interpret blanks in $value
     #local key="$1"
@@ -210,6 +225,10 @@ delete_ws_variables_aws() {
 	    execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_session_token"
     [[ $var_id_aws_session_expiration != "" ]] && \
 	    execute_curl $tfc_token "DELETE" "https://${address}/api/v2/vars/$var_id_aws_session_expiration"
+}
+
+create_varset() {
+    create_varset_api $varset
 }
 
 get_doormat_aws_credentials() {
@@ -445,7 +464,7 @@ create_variables() {
 ################################
 # Step 2.1: INJECT CREDENTIALS #
 ################################
-inject_cloud_credentials() {
+inject_cloud_credentials_workspace() {
     if [[ "${debug}" = "true" ]]; then
         doormat aws -r $doormat_arn tf-push --organization $organization --workspace $workspace
     else
@@ -454,11 +473,19 @@ inject_cloud_credentials() {
     log_success "Cloud credentials have been injected into the workspace via doormat."
 }
 
-inject_cloud_credentials_as_set() {
+inject_cloud_credentials_varset() {
+    
+    # Retrieve varset id as prerequisite 
+    local varset_id=$(
+        execute_curl $tfc_token "GET" \
+            "https://${address}/api/v2/organizations/${organization}/varsets" |\
+            jq -r ".data[] | select (.attributes.name == \"$varset\") | .id"
+    )
+
     if [[ "${debug}" = "true" ]]; then
-        doormat aws -r $doormat_arn tf-push variable-set --id $varset 
+        doormat aws -r $doormat_arn tf-push variable-set --id $varset_id 
     else
-        doormat aws -r $doormat_arn tf-push variable-set --id $varset &> /dev/null
+        doormat aws -r $doormat_arn tf-push variable-set --id $varset_id &> /dev/null
     fi
     log_success "Cloud credentials have been injected into the variable-set via doormat."
 }
@@ -614,7 +641,7 @@ while getopts ":hVdcCixXb" opt; do
             check_environment
             check_doormat
             check_tfc_token
-            inject_cloud_credentials_as_set
+            inject_cloud_credentials_varset
             ;; 
         i )
             # more generic (but doormat seems to be broken when using 'doormat aws -json ...')
@@ -635,8 +662,8 @@ while getopts ":hVdcCixXb" opt; do
             [[ $inject_cloud_credentials = "true" ]] && check_doormat
             create_workspace
             create_variables
-            [[ $inject_cloud_credentials = "true" ]] && inject_cloud_credentials
-            #[[ $inject_cloud_credentials = "true" ]] && get_doormat_aws_credentials
+            [[ $inject_cloud_credentials = "true" && $varset = "" ]] && inject_cloud_credentials_workspace
+            [[ $inject_cloud_credentials = "true" && $varset != "" ]] && create_varset && inject_cloud_credentials_varset
             [[ $attach_workspace2policyset = "true" ]] && attach_workspace2policyset
             [[ $assign_vcs_to_workspace = "true" ]] && add_vcs_to_workspace
             add_workspace_settings
