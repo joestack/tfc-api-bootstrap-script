@@ -1,5 +1,5 @@
 #!/bin/bash
-version=231219-2
+version=231222
 
 #set -o xtrace
 
@@ -388,7 +388,7 @@ destroy_run_api() {
 {
   "data": {
     "attributes": {
-      "message": "Destroy initiated by tf_bootstrap_script",
+      "message": "Destroy initiated by tfcli.sh",
       "is-destroy": "true",
       "auto-apply": "true"	
     },
