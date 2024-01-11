@@ -5,5 +5,5 @@
 # KEY,VALUE,[terraform|env],HCL[true|false],SENSITIVE[true|false]
 #
 aws_region,eu-central-2,terraform,false,false
-key,value,env,false,false
-key,sensitive_value,env,false,true
+key1,value,env,false,false
+key2,sensitive_value,env,false,true

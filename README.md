@@ -31,7 +31,7 @@ Finally run the **tfcli.sh -b** script to create or re-create your infrastructur
 
 ---
 
-## Quick HowTo
+# Quick HowTo
 a) Clone the repo on your local machine (Linux/Mac)
 ```
 git clone https://github.com/joestack/tfc-api-bootstrap-script.git
@@ -48,4 +48,17 @@ c) Define your specific **environments.conf** and **variables.csv** within a fol
 tfcli.sh -b
 ```
 
+---
+``````
+$> tfcli.sh -OPTION
+
+[-h]   Print this help message
+[-b]   Bootstrap the environment based on environment.conf and variables.csv
+[-x]   Destroy run on Workspace to delete all resources
+[-X]   Delete Workspace (DANGER!!! Be sure no unmanaged resources are left)
+[-d]   Print Debug output
+[-V]   Version Info
+HASHICORP INTERNAL (can be ignored):
+[-c]   Inject AWS cloud credentials to Workspace via Doormat (AWS only)
+[-C]   Inject AWS cloud credentials as Variable-Set via Doormat (AWS only)
 
