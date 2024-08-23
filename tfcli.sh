@@ -1,5 +1,5 @@
 #!/bin/bash
-version=240111
+version=240823
 
 #set -o xtrace
 
@@ -633,7 +633,7 @@ while getopts ":hVdcCixXb" opt; do
             check_environment
             check_doormat
             check_tfc_token
-            inject_cloud_credentials
+            inject_cloud_credentials_workspace
             ;; 
         C )
             # non generic doormat solution that works for AWS only 'doormat aws tf-push ...'
